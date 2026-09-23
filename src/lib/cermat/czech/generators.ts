@@ -1,5 +1,15 @@
 import type { Rng } from "../rng";
 import type { Choice, Part } from "../types";
+import {
+  distractors,
+  neverFor,
+  rodVzoru,
+  FUNKCNI_STYLY_VSE,
+  SLOHOVE_UTVARY_VSE,
+  SLOVNI_DRUHY_VSE,
+  VZORY_PODLE_RODU,
+  ZANRY_VSE,
+} from "./taxonomie";
 import type { GenResult } from "../math/generators";
 import { PASSAGES, type Passage } from "./texts";
 import {
@@ -237,18 +247,28 @@ export const chybyVTextu: CzechGen = (rng, points) => {
 
 export const slovniDruhy: CzechGen = (rng, points) => {
   const item = rng.pick(SLOVNI_DRUHY);
+  // nabídka se losuje z desítky slovních druhů, ne z napevno psané trojice
+  const wrong = distractors(rng, SLOVNI_DRUHY_VSE, item.correct, 3, { near: item.wrong });
   return {
     stimulusTitle: "VÝCHOZÍ VĚTA K ÚLOZE",
     stimulus: item.sentence,
     prompt: `Jakým slovním druhem je ve výchozí větě slovo „${item.word}“?`,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    parts: [pick4(rng, "", item.correct, wrong, points)],
     solution: `Správně: ${item.correct} — ${item.why}`,
   };
 };
 
 export const vzory: CzechGen = (rng, points) => {
   const item = rng.pick(VZORY);
-  return oneOf(rng, item, `Podle kterého vzoru se skloňuje podstatné jméno „${item.q}“?`, points);
+  // jen vzory téhož rodu — vzor jiného rodu by šel vyloučit bez přemýšlení
+  const wrong = distractors(rng, VZORY_PODLE_RODU[rodVzoru(item.correct)], item.correct, 3, {
+    near: item.wrong,
+  });
+  return {
+    prompt: `Podle kterého vzoru se skloňuje podstatné jméno „${item.q}“?`,
+    parts: [pick4(rng, "", item.correct, wrong, points)],
+    solution: `Správně: ${item.correct} — ${item.why}`,
+  };
 };
 
 /** Přiřazování trojic sloves podle vidu — v sešitu úloha 6. */
@@ -493,22 +513,30 @@ export const gramatickeDoplneni: CzechGen = (rng, points) => {
 
 export const funkcniStyl: CzechGen = (rng, points) => {
   const item = rng.pick(STYLY);
+  const wrong = distractors(rng, FUNKCNI_STYLY_VSE, item.correct, 3, {
+    near: item.wrong,
+    never: neverFor(item.correct),
+  });
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus: item.ukazka,
     prompt: "Ke kterému funkčnímu stylu patří výchozí text k této úloze?",
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    parts: [pick4(rng, "", item.correct, wrong, points)],
     solution: `Správně: ${item.correct} — ${item.why}`,
   };
 };
 
 export const slohovyUtvar: CzechGen = (rng, points) => {
   const item = rng.pick(UTVARY);
+  const wrong = distractors(rng, SLOHOVE_UTVARY_VSE, item.correct, 3, {
+    near: item.wrong,
+    never: neverFor(item.correct),
+  });
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus: item.ukazka,
     prompt: "O jaký slohový útvar jde?",
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    parts: [pick4(rng, "", item.correct, wrong, points)],
     solution: `Správně: ${item.correct} — ${item.why}`,
   };
 };
@@ -530,9 +558,13 @@ export const literarniDruh: CzechGen = (rng, points) => {
 
 export const zanr: CzechGen = (rng, points) => {
   const item = rng.pick(ZANRY);
+  const wrong = distractors(rng, ZANRY_VSE, item.correct, 3, {
+    near: item.wrong,
+    never: neverFor(item.correct),
+  });
   return {
     prompt: `Který literární žánr odpovídá této charakteristice?\n\n„${item.q}“`,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    parts: [pick4(rng, "", item.correct, wrong, points)],
     solution: `Správně: ${item.correct} — ${item.why}`,
   };
 };
