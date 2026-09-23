@@ -81,7 +81,7 @@ export default function Home() {
         čtyřleté obory — se stejnou stavbou, stejným rozložením typů úloh i stejným
         bodováním, jaké má skutečná zkouška. Matematické úlohy se počítají pokaždé
         znovu, takže stejná čísla neuvidíte dvakrát; u češtiny se mění výběr úloh,
-        výchozí texty i pořadí nabídek.
+        výchozí texty, hledaná slova i nabídka možností.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">

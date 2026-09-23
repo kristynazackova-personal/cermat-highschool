@@ -28,12 +28,24 @@ export default function AboutPage() {
             vašem prohlížeči z generátorů napsaných na míru každému typu úlohy. Matematika
             počítá v přesné zlomkové aritmetice, takže výsledek nikdy nevznikne
             zaokrouhlením, a čísla jsou pokaždé nová; geometrické úlohy si samy kreslí
-            obrázek.\n\nU češtiny je to jinak, a stojí za to to říct rovnou: jazykový obsah
-            se negeneruje šablonou. Všechny věty, ukázky a nabídky jsou předem napsané
-            a ověřené a generátor z nich vybírá a míchá pořadí. Šablona by v češtině
-            snadno vyrobila tvar, který neexistuje, nebo otázku s víc než jednou správnou
-            odpovědí. Zásoba je konečná, takže po několika testech se výchozí texty
-            začnou opakovat — u matematiky se to nestane.
+            obrázek.
+          </p>
+          <p className="mt-2">
+            U češtiny je to jinak a stojí za to to říct rovnou: slova a věty se skládat
+            šablonou nedají — snadno by vznikl tvar, který neexistuje, nebo otázka s víc
+            než jednou správnou odpovědí. Generuje se proto to, co generovat jde, a je
+            toho víc, než se na první pohled zdá. Zadání typu „napište čtyřslabičné
+            podstatné jméno příbuzné se slovem PLOT, které se skloňuje podle vzoru
+            STAVENÍ“ vzniká jako kombinace mluvnických podmínek a hledané slovo se k nim
+            dohledá v otagované slovní zásobě. Nesprávné možnosti se losují ze soustavy
+            termínů — slovních druhů je deset, vzorů pro každý rod několik — takže
+            zapamatovaná sestava nabídky nepomůže. A v textech, kde se hledají chyby
+            nebo nespisovná slova, je míst víc, než kolik se jich hledá, takže v témž
+            textu hledáte pokaždé jiná slova.
+          </p>
+          <p className="mt-2">
+            Co se nepočítá: ukázky, básně a souvislé texty jsou psané ručně a je jich
+            konečný počet, takže se po čase začnou opakovat. U matematiky se to nestane.
           </p>
         </div>
 
