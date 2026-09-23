@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { generateTest, scoreTest, type ScoreResult } from "@/lib/cermat/build";
@@ -18,6 +18,29 @@ function randomSeed() {
   return Math.floor(Math.random() * 2 ** 30);
 }
 
+/**
+ * Sklad vylosovaných začátků, VEDLE Reactu.
+ *
+ * Semínko se smí zvolit až v prohlížeči — kdyby ho zvolil server, předrenderoval
+ * by jiný test, než jaký se pak objeví. Zároveň se smí zvolit jen jednou: kdyby
+ * se losovalo při renderu, mohl by se běžící test uprostřed vyměnit, a kdyby se
+ * losovalo v efektu, proběhl by po každém příchodu na stránku render navíc.
+ *
+ * Proto se hodnota drží tady, mimo React, a `useSyncExternalStore` ji jen čte.
+ * Pro týž klíč vrací pokaždé tentýž objekt, takže se React nemá o čem
+ * překreslovat.
+ */
+const zacatky = new Map<string, { seed: number; at: number }>();
+
+function zacatek(kod: string, kodTestu: string | null) {
+  let z = zacatky.get(kod);
+  if (!z) {
+    z = { seed: kodTestu ? seedFromCode(kodTestu) : randomSeed(), at: Date.now() };
+    zacatky.set(kod, z);
+  }
+  return z;
+}
+
 function mmss(total: number) {
   const s = Math.max(0, total);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -33,7 +56,6 @@ export default function Runner() {
 
   // Semínko a okamžik startu vznikají spolu: díky tomu se konec času odvodí
   // čistou funkcí a Date.now() se během renderu nevolá.
-  const [start, setStart] = useState<{ seed: number; at: number } | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selfScores, setSelfScores] = useState<Record<string, number>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -42,12 +64,22 @@ export default function Runner() {
   const [sync, setSync] = useState<"off" | "loading" | "saved" | "saving">("off");
   const topRef = useRef<HTMLDivElement>(null);
 
-  // Semínko určíme až na klientu — kdyby ho zvolil server, vyrenderoval by
-  // jiný test než ten, který se pak objeví v prohlížeči.
-   
-  useEffect(() => {
-    setStart({ seed: codeParam ? seedFromCode(codeParam) : randomSeed(), at: Date.now() });
-  }, [codeParam]);
+  // Semínko se čte ze skladu vedle Reactu (viz `zacatky` nahoře): na serveru
+  // vrátí `useSyncExternalStore` null, takže se předrenderuje jen prázdná
+  // stránka a losuje se až v prohlížeči.
+  //
+  // „Nový test“ si vyžádá další losování tím, že zvedne tohle číslo. Kód
+  // v adrese platí jen pro první losování — po kliknutí na „Nový test“ je
+  // v adrese pořád kód právě doběhnutého testu a odvodit z něj semínko by
+  // vrátilo tentýž test znovu.
+  const [losovani, setLosovani] = useState(0);
+  const klic = `${losovani}|${codeParam ?? ""}`;
+  const zKodu = losovani === 0 ? codeParam : null;
+  const start = useSyncExternalStore(
+    () => () => {},
+    () => zacatek(klic, zKodu),
+    () => null,
+  );
 
   const test = useMemo(
     () => (start === null ? null : generateTest(subject, start.seed)),
@@ -163,9 +195,8 @@ export default function Runner() {
     setAnswers({});
     setSelfScores({});
     setSubmitted(false);
-    const at = Date.now();
-    setNow(at);
-    setStart({ seed: randomSeed(), at });
+    setNow(Date.now());
+    setLosovani((n) => n + 1);
   }, []);
 
   if (!test) {
