@@ -57,6 +57,9 @@ export function generateTest(subject: Subject, seed: number): GeneratedTest {
   return {
     subject,
     subjectLabel: cfg.label,
+    intro: ctx
+      ? { title: "VÝCHOZÍ TEXT", text: ctx.passage.text, tasks: "úlohy 1–4" }
+      : undefined,
     seed,
     code: seedCode(seed),
     minutes: cfg.minutes,

@@ -41,6 +41,8 @@ export type GeneratedTask = {
 
 export type GeneratedTest = {
   subject: "matematika" | "cestina";
+  /** Výchozí text, ke kterému se váže první blok úloh (čeština). */
+  intro?: { title: string; text: string; tasks: string };
   subjectLabel: string;
   seed: number;
   code: string;

@@ -95,6 +95,11 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
       }
     }
 
+    check(
+      `${subject}: chybí výchozí text k úlohám na porozumění`,
+      subject === "matematika" ? !test.intro : !!test.intro && test.intro.text.length > 200,
+    );
+
     // stejný výchozí text (věta, souvětí, ukázka) se nesmí v testu objevit dvakrát
     const stimuli = test.tasks.map((t) => t.stimulus).filter((x): x is string => !!x);
     check(

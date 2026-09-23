@@ -499,6 +499,22 @@ export default function Runner() {
         <strong>Pokyny:</strong> Na řešení máte {cfg.minutes} minut. {cfg.note} {cfg.allowed}
       </p>
 
+      {test.intro && (
+        <section
+          className="mb-4 rounded-2xl border p-5 sm:p-6"
+          style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+          aria-label="Výchozí text"
+        >
+          <p className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+            {test.intro.title}
+          </p>
+          <div className="pre-wrap mt-2 text-[15px] leading-relaxed">{test.intro.text}</div>
+          <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+            K výchozímu textu se vztahují {test.intro.tasks}.
+          </p>
+        </section>
+      )}
+
       <div className="grid gap-4">
         {test.tasks.map((task) => (
           <TaskView
