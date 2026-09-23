@@ -9,6 +9,37 @@ import { db } from "@/lib/server/db";
  * jen si nic nepamatuje. Díky tomu nasazení nespadne, když proměnné
  * chybí, a dá se rozjet postupně.
  */
+/**
+ * Adresa, na které web běží, se dá nastavit proměnnou AUTH_URL. Když ale
+ * ukazuje na localhost, je to vždycky omyl — v nasazení takovou adresu
+ * Google jako návratovou nepřijme (odmítne ji jako neplatnou) a přihlášení
+ * skončí chybou dřív, než se kdo stihne přihlásit. V takovém případě je
+ * lepší proměnnou ignorovat a odvodit adresu z hlaviček, které posílá
+ * Railway; `trustHost` níž je přesně na tohle.
+ *
+ * Děje se to před voláním NextAuth(), protože právě tam se proměnné čtou.
+ */
+function zahodMylnouAdresu(jmeno: "AUTH_URL" | "NEXTAUTH_URL") {
+  const v = process.env[jmeno];
+  if (!v) return;
+  let host: string;
+  try {
+    host = new URL(v).hostname;
+  } catch {
+    // nesmyslná hodnota je k ničemu stejně jako localhost
+    delete process.env[jmeno];
+    return;
+  }
+  if (host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "0.0.0.0") {
+    delete process.env[jmeno];
+  }
+}
+
+if (process.env.NODE_ENV === "production") {
+  zahodMylnouAdresu("AUTH_URL");
+  zahodMylnouAdresu("NEXTAUTH_URL");
+}
+
 export const authEnabled = Boolean(
   process.env.DATABASE_URL &&
     process.env.AUTH_GOOGLE_ID &&
