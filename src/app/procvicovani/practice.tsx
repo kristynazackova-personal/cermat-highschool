@@ -41,7 +41,7 @@ export default function Practice() {
   );
 
   const check = useCallback(() => {
-    if (!task) return;
+    if (!task || seed === null) return;
     const r = scoreSingleTask(task, answers, selfScore);
     setChecked(r);
     setTally((prev) => ({
@@ -49,7 +49,16 @@ export default function Practice() {
       earned: prev.earned + r.earned,
       points: prev.points + r.points,
     }));
-  }, [task, answers, selfScore]);
+
+    // Uložení na pozadí: přihlášený žák pak výsledek najde v „Moje testy“.
+    // Posílají se jen odpovědi — úlohu i body si server spočítá ze semínka
+    // sám. Když se to nepovede (nepřihlášen, výpadek), procvičování běží dál.
+    fetch("/api/practice", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject, seed, topic, answers, selfScore }),
+    }).catch(() => {});
+  }, [task, seed, subject, topic, answers, selfScore]);
 
   const next = useCallback(() => {
     setAnswers({});

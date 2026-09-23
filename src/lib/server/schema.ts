@@ -125,5 +125,41 @@ CREATE TABLE IF NOT EXISTS attempt_tasks (
 CREATE INDEX IF NOT EXISTS attempt_tasks_gen ON attempt_tasks (gen);
 CREATE INDEX IF NOT EXISTS attempt_tasks_topic ON attempt_tasks (topic);
 
+/* ------------------------------------------------------------------ */
+/* Procvičování                                                        */
+/* ------------------------------------------------------------------ */
+
+-- Jeden řádek = jedna zkontrolovaná úloha z procvičování. Není to pokus
+-- o test: úlohy chodí po jedné, bez časového limitu a bez celkového
+-- výsledku, takže se do attempts nevejdou. Sloupce popisující úlohu jsou
+-- ale schválně stejné jako v attempt_tasks — přehled „kde ztrácím body“
+-- pak obě zdroje sečte jedním dotazem.
+CREATE TABLE IF NOT EXISTS practice_answers (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject       text NOT NULL CHECK (subject IN ('matematika', 'cestina')),
+  -- semínko a zvolený okruh stačí k rekonstrukci úlohy, zadání se neukládá
+  seed          bigint NOT NULL,
+  topic_filter  text,
+  task_n        int  NOT NULL,
+  gen           text NOT NULL,
+  topic         text NOT NULL,
+  scoring       text NOT NULL CHECK (scoring IN ('per-part','stepped','errors','all-or-nothing')),
+  points        numeric(4,1) NOT NULL,
+  earned        numeric(4,1) NOT NULL,
+  correct_parts int NOT NULL,
+  total_parts   int NOT NULL,
+  answered_at   timestamptz NOT NULL DEFAULT now()
+);
+
+-- Táž úloha u téhož žáka je týž řádek. Dvojí odeslání (překliknutí, opakování
+-- požadavku po výpadku sítě) tak nenafoukne statistiku. Okruh může chybět,
+-- a NULL se v indexu sám sobě nerovná, proto prázdný řetězec.
+CREATE UNIQUE INDEX IF NOT EXISTS practice_answers_task_uniq
+  ON practice_answers (user_id, subject, seed, COALESCE(topic_filter, ''));
+
+CREATE INDEX IF NOT EXISTS practice_answers_recent
+  ON practice_answers (user_id, answered_at DESC);
+
 COMMIT;
 `;

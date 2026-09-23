@@ -7,6 +7,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { generateTest, scoreTest } from "../cermat/build";
 import { openAttempt, saveAnswers, loadAttempt, submitAttempt, history, topicBreakdown } from "./attempts";
+import { recordPractice, practiceHistory, practiceSummary } from "./practice";
+import { practiceTask, scoreSingleTask } from "../cermat/build";
 import type { Queryable } from "./db";
 
 let failures = 0;
@@ -107,6 +109,60 @@ async function main() {
     (await loadAttempt(q, u2.rows[0].id, test.code)) === null);
   check("cizí uživatel nemůže cizí pokus přepsat",
     !(await saveAnswers(q, u2.rows[0].id, test.code, { "1.": "hack" }, {})));
+
+
+  /* ---------------------------- procvičování ---------------------------- */
+
+  const cizi = u2.rows[0].id;
+  const pt = practiceTask("matematika", 424242, null);
+  const spatne = scoreSingleTask(pt, {}, 0);
+  await recordPractice(q, uid, {
+    subject: "matematika", seed: 424242, topicFilter: null, task: pt,
+    earned: spatne.earned, points: spatne.points,
+    correctParts: spatne.correctParts, totalParts: spatne.totalParts,
+  });
+
+  const ph = await practiceHistory(q, uid);
+  check("procvičování se uloží", ph.length === 1 && ph[0].topic === pt.topic);
+
+  // táž úloha podruhé: přepíše se, nepřibude
+  const dobre = scoreSingleTask(
+    pt, Object.fromEntries(pt.parts.map((x) => [`${pt.n}.${x.id}`, x.answer])),
+    pt.parts.filter((x) => x.format === "construction").reduce((a, x) => a + x.points, 0),
+  );
+  await recordPractice(q, uid, {
+    subject: "matematika", seed: 424242, topicFilter: null, task: pt,
+    earned: dobre.earned, points: dobre.points,
+    correctParts: dobre.correctParts, totalParts: dobre.totalParts,
+  });
+  const ph2 = await practiceHistory(q, uid);
+  check("táž úloha podruhé řádek přepíše, nepřidá", ph2.length === 1, `${ph2.length} řádků`);
+  check("počítá se poslední pokus", ph2[0].earned === dobre.earned,
+    `${ph2[0].earned} ≠ ${dobre.earned}`);
+
+  // týž seed, ale jiný zvolený okruh = jiná úloha, tedy další řádek
+  await recordPractice(q, uid, {
+    subject: "matematika", seed: 424242, topicFilter: pt.topic, task: pt,
+    earned: 1, points: 2, correctParts: 1, totalParts: 2,
+  });
+  check("jiný zvolený okruh je jiná úloha", (await practiceHistory(q, uid)).length === 2);
+
+  const ps = await practiceSummary(q, uid);
+  check("souhrn sedí se součtem řádků",
+    ps.count === 2 && ps.earned === dobre.earned + 1 && ps.points === dobre.points + 2,
+    JSON.stringify(ps));
+
+  // přehled okruhů musí sčítat testy I procvičování
+  const tbPo = await topicBreakdown(q, uid);
+  const pred = tb.find((x) => x.topic === pt.topic);
+  const po = tbPo.find((x) => x.topic === pt.topic);
+  check("procvičování se promítne do přehledu okruhů",
+    !!po && (!pred || po.total > pred.total), `${pred?.total} → ${po?.total}`);
+
+  // a nesmí přetéct k jinému uživateli
+  check("cizí uživatel nevidí cizí procvičování", (await practiceHistory(q, cizi)).length === 0);
+  check("cizí uživatel má prázdný souhrn", (await practiceSummary(q, cizi)).count === 0);
+  check("cizí uživatel má prázdný přehled okruhů", (await topicBreakdown(q, cizi)).length === 0);
 
   console.log(failures === 0 ? "\n✓ Datová vrstva v pořádku." : `\n✗ ${failures} problémů.`);
   process.exit(failures === 0 ? 0 : 1);

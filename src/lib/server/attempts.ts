@@ -157,18 +157,34 @@ export async function history(q: Queryable, userId: string, limit = 30): Promise
   }));
 }
 
-/** Úspěšnost po okruzích napříč všemi odeslanými pokusy — přehled pokroku. */
+/**
+ * Úspěšnost po okruzích — přehled pokroku.
+ *
+ * Počítá se z ODEVZDANÝCH TESTŮ I Z PROCVIČOVÁNÍ. Kdo procvičuje a testy
+ * skoro nepíše, by jinak viděl prázdno, přestože úloh vyřešil spoustu; a
+ * okruh, který dělá potíže, dělá potíže bez ohledu na to, kde se na něj
+ * narazilo. Obě tabulky mají proto stejné sloupce `topic`, `earned`
+ * a `points`.
+ */
 export async function topicBreakdown(
   q: Queryable,
   userId: string,
 ): Promise<Array<{ topic: string; earned: number; total: number }>> {
   const { rows } = await q.query(
-    `SELECT t.topic, SUM(t.earned)::float AS earned, SUM(t.points)::float AS total
-       FROM attempt_tasks t
-       JOIN attempts a ON a.id = t.attempt_id
-      WHERE a.user_id = $1 AND a.submitted_at IS NOT NULL
-      GROUP BY t.topic
-      ORDER BY (SUM(t.earned) / NULLIF(SUM(t.points), 0)) ASC`,
+    `WITH vse AS (
+       SELECT t.topic, t.earned, t.points
+         FROM attempt_tasks t
+         JOIN attempts a ON a.id = t.attempt_id
+        WHERE a.user_id = $1 AND a.submitted_at IS NOT NULL
+       UNION ALL
+       SELECT p.topic, p.earned, p.points
+         FROM practice_answers p
+        WHERE p.user_id = $1
+     )
+     SELECT topic, SUM(earned)::float AS earned, SUM(points)::float AS total
+       FROM vse
+      GROUP BY topic
+      ORDER BY (SUM(earned) / NULLIF(SUM(points), 0)) ASC`,
     [userId],
   );
   return rows.map((r) => ({
