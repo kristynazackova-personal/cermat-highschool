@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { generateTest, scoreTest, type ScoreResult } from "@/lib/cermat/build";
-import type { GeneratedTask, Part } from "@/lib/cermat/types";
-import { EXAM, type Subject } from "@/lib/cermat/spec";
+import type { Choice, GeneratedTask, Part } from "@/lib/cermat/types";
+import { EXAM, MATH_FORMULAS, type Subject } from "@/lib/cermat/spec";
 import { seedCode, seedFromCode } from "@/lib/cermat/rng";
 
 /* ------------------------------ pomocné ------------------------------ */
@@ -79,6 +79,7 @@ function MarkdownTable({ src }: { src: string }) {
 function PartView({
   task,
   part,
+  offer,
   value,
   onChange,
   selfScore,
@@ -88,6 +89,7 @@ function PartView({
 }: {
   task: GeneratedTask;
   part: Part;
+  offer?: Choice[];
   value: string;
   onChange: (v: string) => void;
   selfScore: number;
@@ -111,12 +113,13 @@ function PartView({
     <div className="mt-3">
       <div className="flex flex-wrap items-baseline gap-2">
         {part.id && (
-          <span className="font-semibold" aria-hidden>
-            {part.id})
+          <span className="font-semibold whitespace-nowrap" aria-hidden>
+            {/* číselné podúlohy se v sešitu značí „2.1“, písmenné „a)“ */}
+            {/^\d+$/.test(part.id) ? `${task.n}.${part.id}` : `${part.id})`}
           </span>
         )}
         {part.prompt && <span className="pre-wrap text-[15px]">{part.prompt}</span>}
-        {part.points > 0 && (
+        {part.points > 0 && task.scoring !== "stepped" && (
           <span className="text-xs tabular-nums" style={{ color: "var(--muted)" }}>
             ({part.points} b)
           </span>
@@ -188,6 +191,40 @@ function PartView({
             })}
           </div>
         </fieldset>
+      )}
+
+      {/* přiřazovací podúloha — vybírá se písmeno ze společné nabídky */}
+      {part.format === "match" && offer && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {offer.map((c) => {
+            const picked = value === c.key;
+            const isRight = showAnswers && c.key === part.answer;
+            const isWrongPick = showAnswers && picked && c.key !== part.answer;
+            return (
+              <button
+                key={c.key}
+                type="button"
+                disabled={locked}
+                onClick={() => onChange(c.key)}
+                aria-pressed={picked}
+                aria-label={`Možnost ${c.key}: ${c.text}`}
+                className="h-9 w-9 rounded-lg border text-sm font-semibold tabular-nums"
+                style={{
+                  borderColor: isRight ? "var(--good)" : isWrongPick ? "var(--bad)" : picked ? "var(--accent)" : "var(--line)",
+                  background: isRight ? "var(--good-soft)" : isWrongPick ? "var(--bad-soft)" : picked ? "var(--accent-soft)" : "var(--surface)",
+                  color: "var(--ink)",
+                }}
+              >
+                {c.key}
+              </button>
+            );
+          })}
+          {showAnswers && (
+            <span className="text-sm" style={{ color: "var(--muted)" }}>
+              správně: <strong style={{ color: "var(--good)" }}>{part.answer}</strong>
+            </span>
+          )}
+        </div>
       )}
 
       {/* otevřená úloha s výsledkem */}
@@ -293,9 +330,8 @@ function TaskView({
   result: ScoreResult | null;
   showAnswers: boolean;
 }) {
-  const earned = result
-    ? result.parts.filter((p) => p.taskN === task.n).reduce((s, p) => s + p.earned, 0)
-    : 0;
+  const tr = result?.tasks.find((t) => t.n === task.n);
+  const earned = tr?.earned ?? 0;
 
   return (
     <article
@@ -331,7 +367,7 @@ function TaskView({
 
       {task.stimulus && <Stimulus title={task.stimulusTitle} text={task.stimulus} />}
 
-      <div className="pre-wrap text-[15px] leading-relaxed">{task.prompt}</div>
+      {task.prompt && <div className="pre-wrap text-[15px] leading-relaxed">{task.prompt}</div>}
 
       {task.figure && (
         <div
@@ -342,6 +378,25 @@ function TaskView({
         />
       )}
 
+      {task.offer && (
+        <div
+          className="mt-3 rounded-xl border px-4 py-3"
+          style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--line) 18%, transparent)" }}
+        >
+          <p className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--muted)" }}>
+            Nabídka
+          </p>
+          <ul className="mt-1.5 grid gap-1 sm:grid-cols-2 text-[15px]">
+            {task.offer.map((c) => (
+              <li key={c.key} className="flex gap-2">
+                <span className="font-semibold tabular-nums">{c.key})</span>
+                <span>{c.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {task.parts.map((part) => {
         const key = `${task.n}.${part.id}`;
         const pr = result?.parts.find((p) => p.taskN === task.n && p.partId === part.id) ?? null;
@@ -350,6 +405,7 @@ function TaskView({
             key={key}
             task={task}
             part={part}
+            offer={task.offer}
             value={answers[key] ?? ""}
             onChange={(v) => setAnswer(key, v)}
             selfScore={selfScores[key] ?? 0}
@@ -529,6 +585,39 @@ export default function Runner() {
           />
         ))}
       </div>
+
+      {subject === "matematika" && (
+        <details
+          className="mt-6 rounded-2xl border px-5 py-4"
+          style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+        >
+          <summary className="cursor-pointer text-sm font-semibold">
+            Vybrané vzorce a vztahy
+            <span className="ml-2 font-normal" style={{ color: "var(--muted)" }}>
+              — u zkoušky je najdete na poslední straně testového sešitu
+            </span>
+          </summary>
+          <div className="mt-3 grid gap-2 text-sm" style={{ color: "var(--muted)" }}>
+            <p>
+              <strong style={{ color: "var(--ink)" }}>Druhé mocniny 11–20:</strong> {MATH_FORMULAS.squares}
+            </p>
+            <p>
+              <strong style={{ color: "var(--ink)" }}>Ludolfovo číslo:</strong> {MATH_FORMULAS.pi}
+            </p>
+            <p>
+              <strong style={{ color: "var(--ink)" }}>Rozklad na součin:</strong>
+            </p>
+            <ul className="ml-4 grid gap-0.5">
+              {MATH_FORMULAS.products.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+            <p>
+              <strong style={{ color: "var(--ink)" }}>Kruh:</strong> {MATH_FORMULAS.circle}
+            </p>
+          </div>
+        </details>
+      )}
 
       {!result ? (
         <div className="no-print sticky bottom-0 mt-6 -mx-4 border-t px-4 py-3 backdrop-blur"

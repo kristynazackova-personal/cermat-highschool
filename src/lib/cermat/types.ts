@@ -33,6 +33,10 @@ export type GeneratedTask = {
   figure?: string;
   prompt: string;
   parts: Part[];
+  /** Společná nabídka u přiřazovací úlohy (A–F). */
+  offer?: Choice[];
+  /** Nelineární hodnocení skupiny — viz ScoringMode ve spec.ts. */
+  scoring?: "per-part" | "stepped";
   /** Komentovaný postup řešení. */
   solution: string;
   /** Úloha se hodnotí ručně (konstrukce, postup). */

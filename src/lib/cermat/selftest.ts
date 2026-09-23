@@ -54,18 +54,41 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
 
     for (const task of test.tasks) {
       const sum = task.parts.reduce((s, p) => s + p.points, 0);
+      if (task.scoring === "stepped") {
+        // u stupňovitě hodnocené skupiny nemají podúlohy vlastní dotaci
+        check(
+          `${subject}/úloha ${task.n}: stupňovitá úloha nesmí bodovat podúlohy`,
+          sum === 0,
+          `${sum}`,
+        );
+        check(
+          `${subject}/úloha ${task.n}: stupňovitá úloha musí mít 3 podúlohy`,
+          task.parts.length === 3,
+        );
+      } else {
+        check(
+          `${subject}/úloha ${task.n}: body podúloh se nesečtou na dotaci úlohy`,
+          sum === task.points,
+          `${sum} ≠ ${task.points}`,
+        );
+      }
+      // zadání smí být prázdné jen tehdy, nese-li je každá podúloha zvlášť
       check(
-        `${subject}/úloha ${task.n}: body podúloh se nesečtou na dotaci úlohy`,
-        sum === task.points,
-        `${sum} ≠ ${task.points}`,
+        `${subject}/úloha ${task.n}: prázdné zadání`,
+        task.prompt.trim().length > 0 || task.parts.every((p) => p.prompt.trim().length > 0),
       );
-      check(`${subject}/úloha ${task.n}: prázdné zadání`, task.prompt.trim().length > 0);
       check(`${subject}/úloha ${task.n}: chybí řešení`, task.solution.trim().length > 0);
 
       for (const part of task.parts) {
         const key = `${task.n}.${part.id}`;
 
-        if (part.format === "choice" || part.format === "truefalse") {
+        if (part.format === "match") {
+          check(`${subject}/úloha ${task.n}: přiřazovací úloha bez společné nabídky`, !!task.offer);
+          check(
+            `${subject}/úloha ${task.n}: odpověď není v nabídce`,
+            !!task.offer?.some((c) => c.key === part.answer),
+          );
+        } else if (part.format === "choice" || part.format === "truefalse") {
           check(`${subject}/úloha ${task.n}: uzavřená úloha bez nabídky`, !!part.choices);
           const keys = part.choices!.map((c) => c.key);
           check(
@@ -108,6 +131,18 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
       `seed ${seed}`,
     );
 
+    // přiřazovací úloha musí mít navzájem různé správné odpovědi,
+    // jinak by přiřazení nebylo jednoznačné
+    for (const task of test.tasks) {
+      if (!task.offer) continue;
+      const keys = task.parts.map((p) => p.answer);
+      check(
+        `${subject}/úloha ${task.n}: přiřazovací úloha má dvě stejné správné odpovědi`,
+        new Set(keys).size === keys.length,
+        keys.join(""),
+      );
+    }
+
     // vzorové řešení musí projít na plný počet bodů
     const score = scoreTest(test, perfect, selfScores);
     check(
@@ -115,6 +150,30 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
       score.earned === 50,
       `${score.earned}/50 (seed ${seed})`,
     );
+
+    // stupňovité hodnocení: jedna chyba = polovina, dvě chyby = nula
+    const stepTask = test.tasks.find((t) => t.scoring === "stepped");
+    if (stepTask) {
+      const oneWrong = { ...perfect };
+      const k0 = `${stepTask.n}.${stepTask.parts[0].id}`;
+      oneWrong[k0] = stepTask.parts[0].answer === "A" ? "N" : "A";
+      const s1 = scoreTest(test, oneWrong, selfScores);
+      check(
+        `${subject}: jedna chyba v úloze A/N nemá stát polovinu bodů`,
+        s1.earned === 50 - stepTask.points / 2,
+        `${s1.earned}`,
+      );
+
+      const twoWrong = { ...oneWrong };
+      const k1 = `${stepTask.n}.${stepTask.parts[1].id}`;
+      twoWrong[k1] = stepTask.parts[1].answer === "A" ? "N" : "A";
+      const s2 = scoreTest(test, twoWrong, selfScores);
+      check(
+        `${subject}: dvě chyby v úloze A/N nemají stát celou dotaci`,
+        s2.earned === 50 - stepTask.points,
+        `${s2.earned}`,
+      );
+    }
   }
   console.log(`  ✓ ${subject}: ${RUNS} testů zkontrolováno`);
 }

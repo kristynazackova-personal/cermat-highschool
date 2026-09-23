@@ -76,14 +76,17 @@ export function normalizeAnswer(raw: string): string {
   let s = raw
     .trim()
     .toLowerCase()
-    .replace(/ /g, " ")
+    .replace(/\u00a0/g, " ")
+    // typografické minus a pomlčky sjednotit na obyčejný spojovník, jinak by
+    // se „−1/4“ opsané ze zadání nerovnalo „-1/4“ napsanému na klávesnici
+    .replace(/[\u2212\u2013\u2014]/g, "-")
     .replace(/\s+/g, " ");
   // odstranit běžné jednotky na konci
   s = s.replace(
-    /\s*(cm3|cm²|cm2|cm³|m2|m3|m²|m³|mm2|mm3|km2|dm3|dm2|cm|mm|dm|km|m|kg|dkg|g|t|l|hl|ml|min|hod|h|s|kč|%|°|stupňů|bodů|ks)\s*$/,
+    /\s*(cm3|cm²|cm2|cm³|m2|m3|m²|m³|mm2|mm3|km2|dm3|dm2|cm|mm|dm|km|m|kg|dkg|g|t|l|hl|ml|min|minut|hod|h|s|kč|korun|%|°|stupňů|bodů|ks)\s*$/,
     "",
   );
-  s = s.replace(/\s/g, "").replace(/,/g, ".");
+  s = s.replace(/\s/g, "").replace(/,/g, ".").replace(/[·*]/g, "");
   // zlomek a/b -> desetinné číslo, když vyjde přesně
   const m = s.match(/^(-?\d+)\/(\d+)$/);
   if (m) {
@@ -96,15 +99,31 @@ export function normalizeAnswer(raw: string): string {
     const n = Number(s);
     if (Number.isFinite(n)) return String(n);
   }
-  // u nečíselných odpovědí nerozlišujeme oddělovače: "C, A, B" == "C-A-B" == "CAB"
-  return s.replace(/[.\-–—;]/g, "");
+  // u nečíselných odpovědí nerozlišujeme oddělovače: "C, A, B" == "CAB"
+  return s.replace(/[.;]/g, "");
+}
+
+/**
+ * Sjednotí zápis algebraického výrazu na tvar, který jde porovnat:
+ * odstraní mezery a znaky násobení, „x^2“ i „x2“ zapíše jako „x²“
+ * a jednotkový koeficient („1x“) zkrátí na „x“.
+ */
+export function normalizeExpr(raw: string): string {
+  let s = normalizeAnswer(raw);
+  s = s.replace(/\^2/g, "²").replace(/\^3/g, "³");
+  s = s.replace(/([a-z])2(?![0-9])/g, "$1²");
+  s = s.replace(/(^|[+\-(])1([a-z])/g, "$1$2");
+  return s;
 }
 
 /** Porovná odpověď žáka se správnou odpovědí a s uznávanými variantami. */
 export function answersMatch(given: string, answer: string, accept: string[] = []): boolean {
+  if (!given.trim()) return false;
   const g = normalizeAnswer(given);
-  if (!g) return false;
-  return [answer, ...accept].some((a) => normalizeAnswer(a) === g);
+  const ge = normalizeExpr(given);
+  return [answer, ...accept].some(
+    (a) => normalizeAnswer(a) === g || normalizeExpr(a) === ge,
+  );
 }
 
 /** Pythagorejské trojice pro úlohy s celočíselným výsledkem. */

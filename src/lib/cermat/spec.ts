@@ -18,9 +18,20 @@ export type TaskFormat =
   | "open-result" // otevřená úloha, zapisuje se jen výsledek
   | "open-work" // otevřená úloha, vyžaduje se celý postup řešení
   | "choice" // uzavřená úloha s výběrem z nabídky
-  | "truefalse" // dichotomická úloha ANO/NE
-  | "match" // přiřazovací úloha
+  | "truefalse" // dichotomická úloha A/N
+  | "match" // přiřazovací úloha se společnou nabídkou
   | "construction"; // konstrukční (geometrická) úloha
+
+/**
+ * Jak se sčítají body skupinové úlohy.
+ *
+ * `per-part` — každá podúloha se boduje samostatně (výchozí).
+ * `stepped`  — dichotomická úloha A/N: v testech Cermat NENÍ hodnocení
+ *              lineární. U tříčlenné skupiny za max. 4 body platí
+ *              3 správně → 4 b, 2 správně → 2 b, 1 nebo 0 správně → 0 b.
+ *              Ověřeno v klíči M9A/M9B/M9C/M9D 2026, úloha 11.
+ */
+export type ScoringMode = "per-part" | "stepped";
 
 /** Základní parametry zkoušky. */
 export const EXAM = {
@@ -33,12 +44,12 @@ export const EXAM = {
       tasks: 16,
       points: 50,
       note:
-        "Test obsahuje otevřené úlohy (jen výsledek i s požadovaným postupem) " +
-        "a uzavřené úlohy (výběr z nabídky, ANO/NE, přiřazování). Zpravidla " +
-        "dvě konstrukční úlohy. Za chybné odpovědi se body nestrhávají — " +
-        "u uzavřených úloh se vyplatí tipovat. Chybí-li u úlohy vyžadující " +
-        "postup zápis řešení, úloha se hodnotí 0 body.",
-      allowed: "Rýsovací potřeby. Kalkulačka a tabulky NEJSOU povoleny.",
+        "Test obsahuje otevřené a uzavřené úlohy; u každé uzavřené úlohy nebo " +
+        "podúlohy je právě jedna odpověď správná. Za neuvedené ani za nesprávné " +
+        "řešení se neudělují záporné body — u uzavřených úloh se proto vyplatí " +
+        "tipovat. Je-li požadován celý postup řešení a uvedete pouze výsledek, " +
+        "nebudou vám přiděleny žádné body.",
+      allowed: "Pouze psací a rýsovací potřeby. Kalkulačka ani tabulky povoleny NEJSOU.",
     },
     cestina: {
       label: "Český jazyk a literatura",
@@ -227,30 +238,63 @@ export type BlueprintItem = {
   /** Bodová dotace. */
   points: number;
   format: TaskFormat;
+  /** Nelineární hodnocení skupiny (jen dichotomické úlohy A/N). */
+  scoring?: ScoringMode;
 };
 
 /**
  * Plán testu z matematiky — 16 úloh, 50 bodů.
- * Rozložení typů a bodů kopíruje dlouhodobě ustálenou podobu testů Cermat.
+ *
+ * Odvozeno ze čtyř skutečných sešitů JPZ 2026 pro čtyřleté obory
+ * (M9A 1. řádný, M9B 2. řádný, M9C 1. náhradní, M9D 2. náhradní termín);
+ * rozbor je v `docs/JPZ_M9A_2026_T1.md`. Napříč všemi čtyřmi formami je
+ * stabilní tato kostra:
+ *
+ *   1        krátký úvodní výpočet, jen výsledek
+ *   2–4      zlomky → úpravy výrazů → rovnice; poslední část vždy s postupem
+ *   5–8      slovní úlohy a geometrie, jen výsledky
+ *   9, 10    dvě konstrukční úlohy, dohromady vždy 5 bodů
+ *   11       dichotomická úloha A/N o třech tvrzeních, vždy 4 body
+ *   12–14    tři samostatné uzavřené úlohy po 2 bodech, nabídka A–E
+ *   15       přiřazovací úloha, tři podúlohy, společná nabídka A–F, 6 bodů
+ *   16       nestandardní aplikační úloha, 4 body
+ *
+ * Bodové dotace úloh 1 a 5–8 se mezi formami mírně liší; použito je
+ * rozložení formy M9B.
  */
 export const MATH_BLUEPRINT: BlueprintItem[] = [
-  { n: 1, gen: "vypocty", topic: "cislo-a-promenna", points: 6, format: "open-result" },
-  { n: 2, gen: "zlomky", topic: "cislo-a-promenna", points: 2, format: "open-result" },
-  { n: 3, gen: "rovnice", topic: "cislo-a-promenna", points: 2, format: "open-result" },
-  { n: 4, gen: "delitelnost", topic: "cislo-a-promenna", points: 2, format: "open-result" },
-  { n: 5, gen: "procenta", topic: "cislo-a-promenna", points: 4, format: "open-work" },
-  { n: 6, gen: "pomer", topic: "cislo-a-promenna", points: 4, format: "open-work" },
-  { n: 7, gen: "posloupnost", topic: "aplikacni-ulohy", points: 2, format: "open-result" },
-  { n: 8, gen: "jednotky", topic: "zavislosti-a-data", points: 2, format: "open-result" },
-  { n: 9, gen: "tabulka", topic: "zavislosti-a-data", points: 3, format: "open-result" },
-  { n: 10, gen: "obsah", topic: "geometrie", points: 4, format: "open-result" },
-  { n: 11, gen: "pythagoras", topic: "geometrie", points: 3, format: "open-result" },
-  { n: 12, gen: "teleso", topic: "geometrie", points: 3, format: "open-result" },
-  { n: 13, gen: "konstrukce", topic: "geometrie", points: 5, format: "construction" },
-  { n: 14, gen: "vyber", topic: "zavislosti-a-data", points: 2, format: "choice" },
-  { n: 15, gen: "anone", topic: "geometrie", points: 3, format: "truefalse" },
-  { n: 16, gen: "logika", topic: "aplikacni-ulohy", points: 3, format: "open-result" },
+  { n: 1, gen: "uvod", topic: "zavislosti-a-data", points: 1, format: "open-result" },
+  { n: 2, gen: "zlomky", topic: "cislo-a-promenna", points: 4, format: "open-work" },
+  { n: 3, gen: "vyrazy", topic: "cislo-a-promenna", points: 4, format: "open-work" },
+  { n: 4, gen: "rovnice", topic: "cislo-a-promenna", points: 4, format: "open-work" },
+  { n: 5, gen: "procenta", topic: "cislo-a-promenna", points: 3, format: "open-result" },
+  { n: 6, gen: "modelovani", topic: "cislo-a-promenna", points: 4, format: "open-result" },
+  { n: 7, gen: "telesa", topic: "geometrie", points: 3, format: "open-result" },
+  { n: 8, gen: "trojuhelnik", topic: "geometrie", points: 2, format: "open-result" },
+  { n: 9, gen: "konstrukce1", topic: "geometrie", points: 2, format: "construction" },
+  { n: 10, gen: "konstrukce2", topic: "geometrie", points: 3, format: "construction" },
+  { n: 11, gen: "anone", topic: "zavislosti-a-data", points: 4, format: "truefalse", scoring: "stepped" },
+  { n: 12, gen: "vyber1", topic: "cislo-a-promenna", points: 2, format: "choice" },
+  { n: 13, gen: "vyber2", topic: "geometrie", points: 2, format: "choice" },
+  { n: 14, gen: "vyber3", topic: "geometrie", points: 2, format: "choice" },
+  { n: 15, gen: "prirazovani", topic: "cislo-a-promenna", points: 6, format: "match" },
+  { n: 16, gen: "nestandardni", topic: "aplikacni-ulohy", points: 4, format: "open-result" },
 ];
+
+/**
+ * Vybrané vzorce a vztahy — v testovém sešitu je žák má na poslední straně,
+ * takže je musíme ukázat také.
+ */
+export const MATH_FORMULAS = {
+  squares: "11² = 121 · 12² = 144 · 13² = 169 · 14² = 196 · 15² = 225 · 16² = 256 · 17² = 289 · 18² = 324 · 19² = 361 · 20² = 400",
+  pi: "π ≐ 3,14   π ≈ 22/7",
+  products: [
+    "a² + 2ab + b² = (a + b)(a + b)",
+    "a² − 2ab + b² = (a − b)(a − b)",
+    "a² − b² = (a + b)(a − b)",
+  ],
+  circle: "Kruh o poloměru r:  o = 2πr,  S = πr²",
+};
 
 /**
  * Plán testu z českého jazyka a literatury — 30 úloh, 50 bodů.

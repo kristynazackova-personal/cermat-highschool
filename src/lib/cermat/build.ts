@@ -8,7 +8,7 @@ import {
   CZECH_TOPICS,
   type Subject,
 } from "./spec";
-import { MATH_GENERATORS } from "./math/generators";
+import { MATH_GENERATORS, makeMathCtx } from "./math/generators";
 import { CZECH_GENERATORS, makeCzechCtx } from "./czech/generators";
 import { answersMatch } from "./math/helpers";
 
@@ -31,11 +31,12 @@ export function generateTest(subject: Subject, seed: number): GeneratedTest {
   // Výchozí text i souvětí pro skladbu vybíráme jednou za test — úlohy 1–4
   // se pak vážou k témuž textu, stejně jako ve skutečném testu.
   const ctx = subject === "cestina" ? makeCzechCtx(rng) : null;
+  const mathCtx = subject === "matematika" ? makeMathCtx(rng) : null;
 
   const tasks: GeneratedTask[] = blueprint.map((item) => {
     const result =
       subject === "matematika"
-        ? MATH_GENERATORS[item.gen](rng, item.points)
+        ? MATH_GENERATORS[item.gen](rng, item.points, mathCtx!)
         : CZECH_GENERATORS[item.gen](rng, item.points, ctx!);
 
     return {
@@ -46,6 +47,8 @@ export function generateTest(subject: Subject, seed: number): GeneratedTest {
       format: item.format,
       prompt: result.prompt,
       parts: result.parts,
+      offer: result.offer,
+      scoring: item.scoring,
       solution: result.solution,
       figure: result.figure,
       stimulus: result.stimulus,
@@ -79,6 +82,15 @@ export type PartResult = {
   earned: number;
 };
 
+export type TaskResult = {
+  n: number;
+  earned: number;
+  points: number;
+  /** Kolik podúloh je správně (u skupinových úloh se hodí do komentáře). */
+  correctParts: number;
+  totalParts: number;
+};
+
 export type ScoreResult = {
   earned: number;
   total: number;
@@ -86,15 +98,29 @@ export type ScoreResult = {
   selfGradedPoints: number;
   percent: number;
   parts: PartResult[];
+  tasks: TaskResult[];
   byTopic: Array<{ topic: string; label: string; earned: number; total: number }>;
 };
 
 function partCorrect(part: Part, given: string): boolean {
   if (!given) return false;
-  if (part.format === "choice" || part.format === "truefalse") {
+  if (part.format === "choice" || part.format === "truefalse" || part.format === "match") {
     return given === part.answer;
   }
   return answersMatch(given, part.answer, part.accept);
+}
+
+/**
+ * Stupňovité hodnocení dichotomické úlohy A/N.
+ *
+ * Klíč Cermatu (úloha 11 ve všech čtyřech formách JPZ 2026) hodnotí skupinu
+ * tří tvrzení takto: všechna tři správně → plný počet bodů, dvě správně →
+ * polovina, jedno nebo žádné → nula. Jedna chyba tedy stojí polovinu bodů.
+ */
+export function steppedScore(correct: number, total: number, points: number): number {
+  if (correct === total) return points;
+  if (correct === total - 1) return points / 2;
+  return 0;
 }
 
 /**
@@ -108,19 +134,33 @@ export function scoreTest(
   selfScores: Record<string, number> = {},
 ): ScoreResult {
   const parts: PartResult[] = [];
+  const tasks: TaskResult[] = [];
   const topicTotals = new Map<string, { label: string; earned: number; total: number }>();
+  let selfGradedPoints = 0;
 
   for (const task of test.tasks) {
+    const stepped = task.scoring === "stepped";
+    let taskEarned = 0;
+    let correctParts = 0;
+
     for (const part of task.parts) {
       const key = `${task.n}.${part.id}`;
       const given = (answers[key] ?? "").trim();
       const isSelf = part.format === "construction";
       const correct = isSelf ? false : partCorrect(part, given);
-      const earned = isSelf
-        ? Math.max(0, Math.min(part.points, selfScores[key] ?? 0))
-        : correct
-          ? part.points
-          : 0;
+      if (correct) correctParts++;
+      if (isSelf) selfGradedPoints += part.points;
+
+      // U stupňovitě hodnocené úlohy nemají podúlohy vlastní bodovou dotaci —
+      // body se přidělují až za celou skupinu.
+      const earned = stepped
+        ? 0
+        : isSelf
+          ? Math.max(0, Math.min(part.points, selfScores[key] ?? 0))
+          : correct
+            ? part.points
+            : 0;
+      if (!stepped) taskEarned += earned;
 
       parts.push({
         taskN: task.n,
@@ -128,20 +168,29 @@ export function scoreTest(
         given,
         correct,
         selfGraded: isSelf,
-        points: part.points,
+        points: stepped ? 0 : part.points,
         earned,
       });
-
-      const t = topicTotals.get(task.topic) ?? { label: task.topicLabel, earned: 0, total: 0 };
-      t.earned += earned;
-      t.total += part.points;
-      topicTotals.set(task.topic, t);
     }
+
+    if (stepped) taskEarned = steppedScore(correctParts, task.parts.length, task.points);
+
+    tasks.push({
+      n: task.n,
+      earned: taskEarned,
+      points: task.points,
+      correctParts,
+      totalParts: task.parts.length,
+    });
+
+    const t = topicTotals.get(task.topic) ?? { label: task.topicLabel, earned: 0, total: 0 };
+    t.earned += taskEarned;
+    t.total += task.points;
+    topicTotals.set(task.topic, t);
   }
 
-  const earned = parts.reduce((s, p) => s + p.earned, 0);
-  const total = parts.reduce((s, p) => s + p.points, 0);
-  const selfGradedPoints = parts.filter((p) => p.selfGraded).reduce((s, p) => s + p.points, 0);
+  const earned = tasks.reduce((s, t) => s + t.earned, 0);
+  const total = test.tasks.reduce((s, t) => s + t.points, 0);
 
   return {
     earned,
@@ -150,6 +199,7 @@ export function scoreTest(
     selfGradedPoints,
     percent: total ? Math.round((earned / total) * 100) : 0,
     parts,
+    tasks,
     byTopic: Array.from(topicTotals.entries()).map(([topic, v]) => ({ topic, ...v })),
   };
 }
