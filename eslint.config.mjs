@@ -1,10 +1,12 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+// eslint-config-next 16 už exportuje rovnou flat config, obal FlatCompat
+// není potřeba (a rozbíjel se na cyklické struktuře v pravidlech reactu).
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
-const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
-
-export default [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-  { ignores: [".next/**", "node_modules/**"] },
+const config = [
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  { ignores: [".next/**", "node_modules/**", "out/**"] },
 ];
+
+export default config;

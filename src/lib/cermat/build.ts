@@ -41,6 +41,7 @@ export function generateTest(subject: Subject, seed: number): GeneratedTest {
 
     return {
       n: item.n,
+      gen: item.gen,
       points: item.points,
       topic: item.topic,
       topicLabel: topicLabel(subject, item.topic),
@@ -244,4 +245,61 @@ export function scoreTest(
     tasks,
     byTopic: Array.from(topicTotals.entries()).map(([topic, v]) => ({ topic, ...v })),
   };
+}
+
+
+/**
+ * Úlohy, které se v testu vážou k výchozímu textu vypsanému nad celým
+ * testem. Při procvičování jedné úlohy je text nutné připojit k ní,
+ * jinak by nešla vyřešit.
+ */
+const INTRO_DEPENDENT = new Set(["text-obsah", "text-myslenka", "vyznam-slov", "vyplyva-a"]);
+
+/**
+ * Vygeneruje jednu úlohu k procvičení, volitelně jen z daného okruhu.
+ *
+ * Staví na `generateTest` — úlohy tak vznikají přesně jako v ostrém testu
+ * a nemůže se stát, že by procvičování zadávalo něco jiného než zkouška.
+ */
+export function practiceTask(
+  subject: Subject,
+  seed: number,
+  topic?: string | null,
+): GeneratedTask {
+  for (let i = 0; i < 40; i++) {
+    // odvozená semínka: Knuthův multiplikativní krok, ať se okruhy střídají
+    const s = (seed + i * 2654435761) >>> 0;
+    const test = generateTest(subject, s);
+    const pool = topic ? test.tasks.filter((t) => t.topic === topic) : test.tasks;
+    if (pool.length === 0) continue;
+
+    const task = pool[(s >>> 9) % pool.length];
+    if (!task.stimulus && test.intro && INTRO_DEPENDENT.has(task.gen)) {
+      return { ...task, stimulus: test.intro.text, stimulusTitle: test.intro.title };
+    }
+    return task;
+  }
+  return generateTest(subject, seed).tasks[0];
+}
+
+/** Vyhodnotí jednu úlohu při procvičování. */
+export function scoreSingleTask(
+  task: GeneratedTask,
+  answers: Record<string, string>,
+  selfScore = 0,
+): { earned: number; points: number; correctParts: number; totalParts: number } {
+  const fake: GeneratedTest = {
+    subject: "matematika",
+    subjectLabel: "",
+    seed: 0,
+    code: "",
+    minutes: 0,
+    totalPoints: task.points,
+    tasks: [task],
+  };
+  const keyed: Record<string, number> = {};
+  for (const p of task.parts) if (p.format === "construction") keyed[`${task.n}.${p.id}`] = selfScore;
+  const r = scoreTest(fake, answers, keyed);
+  const t = r.tasks[0];
+  return { earned: t.earned, points: t.points, correctParts: t.correctParts, totalParts: t.totalParts };
 }

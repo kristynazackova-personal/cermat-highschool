@@ -66,6 +66,57 @@ export default function AboutPage() {
             .
           </p>
         </div>
+
+        <div
+          className="mt-2 flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center"
+          style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+        >
+          {/*
+            Obyčejný <img> na předem zmenšený WebP, ne next/image: jde o jediný
+            malý portrét v pevné velikosti, takže optimalizace za běhu by nic
+            nepřinesla — a stránka díky tomu zůstane čistě statická i kdyby se
+            web někdy exportoval jako statické soubory.
+          */}
+          <img
+            src="/kristyna.webp"
+            alt="Kristýna Zacková"
+            width={96}
+            height={96}
+            loading="lazy"
+            decoding="async"
+            className="h-24 w-24 shrink-0 rounded-full object-cover"
+            style={{ border: "1px solid var(--line)" }}
+          />
+          <div>
+            <p className="font-semibold" style={{ color: "var(--ink)" }}>
+              Kristýna Zacková
+            </p>
+            <p className="mt-1 text-sm leading-relaxed">
+              Web vznikl a je udržován jako volně dostupná pomůcka k přípravě
+              na jednotné přijímací zkoušky.
+            </p>
+            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <a
+                href="https://kristynazackova.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-4"
+                style={{ color: "var(--accent)" }}
+              >
+                kristynazackova.com
+              </a>
+              <a
+                href="https://www.linkedin.com/in/k-zackova/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-4"
+                style={{ color: "var(--accent)" }}
+              >
+                LinkedIn
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

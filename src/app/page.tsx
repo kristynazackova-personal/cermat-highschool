@@ -104,6 +104,40 @@ export default function Home() {
         />
       </div>
 
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold tracking-tight">Nebo po menších kouscích</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/procvicovani"
+            className="group block rounded-2xl border p-5 transition-all hover:-translate-y-0.5"
+            style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+          >
+            <h3 className="font-semibold tracking-tight">Procvičování</h3>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              Úlohy po jedné, bez časomíry. Po každé odpovědi hned uvidíte, jestli
+              je správně, jaké je správné řešení a proč. Jde vybrat jen jeden okruh.
+            </p>
+            <p className="mt-3 text-sm font-medium" style={{ color: "#1d4ed8" }}>
+              Začít procvičovat →
+            </p>
+          </Link>
+          <Link
+            href="/karticky"
+            className="group block rounded-2xl border p-5 transition-all hover:-translate-y-0.5"
+            style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+          >
+            <h3 className="font-semibold tracking-tight">Kartičky</h3>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              Pravidla, pojmy a vzorce, které se hodí umět zpaměti — s vysvětlením,
+              proč to tak je. Co si nejste jistí, se vrátí zpátky.
+            </p>
+            <p className="mt-3 text-sm font-medium" style={{ color: "#7c3aed" }}>
+              Otevřít kartičky →
+            </p>
+          </Link>
+        </div>
+      </section>
+
       <section className="mt-14">
         <h2 className="text-lg font-semibold tracking-tight">Jak to funguje</h2>
         <ol

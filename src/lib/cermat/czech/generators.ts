@@ -175,8 +175,6 @@ export const vyplyvaC = vyplyva(2);
 /* ================================================================== */
 
 export const pravopisVeta: CzechGen = (rng, points) => {
-  const t = rng.pick(TEXTY_S_NESPISOVNYMI);
-  void t;
   // vybereme jednu skupinu s chybou a tři bezchybné z jiných skupin
   const groups = rng.sample(PRAVOPIS_SKUPINY, 4);
   const bad = groups[0];
@@ -214,8 +212,7 @@ export const interpunkceAn: CzechGen = (rng, points) => {
   };
 };
 
-export const chybyVTextu: CzechGen = (rng, points, ctx) => {
-  void ctx;
+export const chybyVTextu: CzechGen = (rng, points) => {
   const t = rng.pick(TEXTY_S_CHYBAMI);
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",

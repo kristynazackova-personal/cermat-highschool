@@ -25,10 +25,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Přijímačky <span style={{ color: "var(--muted)" }}>nanečisto</span>
             </Link>
             <nav className="flex items-center gap-4 text-sm">
-              <Link href="/co-se-ucit" className="hover:underline underline-offset-4">
+              <Link href="/procvicovani" className="hover:underline underline-offset-4">
+                Procvičování
+              </Link>
+              <Link href="/karticky" className="hover:underline underline-offset-4">
+                Kartičky
+              </Link>
+              <Link href="/co-se-ucit" className="hidden sm:inline hover:underline underline-offset-4">
                 Co se učit
               </Link>
-              <Link href="/o-projektu" className="hover:underline underline-offset-4">
+              <Link href="/o-projektu" className="hidden sm:inline hover:underline underline-offset-4">
                 O projektu
               </Link>
             </nav>

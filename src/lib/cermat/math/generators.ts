@@ -98,10 +98,6 @@ function f(x: Frac): string {
 function n(x: number, d = 4): string {
   return cz(x, d).replace("-", "−");
 }
-/** Člen se znaménkem, např. „+ 5“ nebo „− 3“. */
-function term(x: number): string {
-  return x >= 0 ? `+ ${cz(x)}` : `− ${cz(-x)}`;
-}
 
 /* ================================================================== */
 /* 1. Krátký úvodní výpočet                                            */
@@ -874,12 +870,12 @@ function pieSvg(parts: Array<{ label: string; pct: number }>): string {
   return svg(body, W, H);
 }
 
-export const anone: MathGen = (rng, points, ctx) => {
+export const anone: MathGen = (rng, points, _ctx) => {
   // podíly musí dát 100 % a dvě položky mají stejnou hmotnost
   const pEqual = rng.pick([10, 12, 15, 18, 20]);
   const pRice = rng.pick([30, 35, 40]);
   const pSugar = 100 - pRice - 2 * pEqual;
-  if (pSugar <= 5) return anone(rng, points, ctx);
+  if (pSugar <= 5) return anone(rng, points, _ctx);
 
   const unit = rng.pick([3, 4, 6, 9, 12]);
   const total = unit * 100 / gcd(unit, 1); // celková hmotnost tak, aby 1 % bylo celé
@@ -887,7 +883,7 @@ export const anone: MathGen = (rng, points, ctx) => {
   const t = (p: number) => (T / 100) * p;
   void unit; void total;
   if (!Number.isInteger(t(pEqual)) || !Number.isInteger(t(pRice)) || !Number.isInteger(t(pSugar)))
-    return anone(rng, points, ctx);
+    return anone(rng, points, _ctx);
 
   const parts = [
     { label: `rýže ${pRice} %`, pct: pRice },

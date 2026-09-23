@@ -22,6 +22,8 @@ export type Part = {
 
 export type GeneratedTask = {
   n: number;
+  /** Klíč generátoru z plánu testu — kdo úlohu vyrobil. */
+  gen: string;
   points: number;
   topic: string;
   topicLabel: string;
