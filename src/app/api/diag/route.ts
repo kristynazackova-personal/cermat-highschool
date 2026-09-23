@@ -75,6 +75,7 @@ export async function GET() {
     databaze: await stavDatabaze(),
     poznamka:
       "„navratovaAdresa“ musí být v Google Cloud Console mezi Authorized " +
-      "redirect URIs. Chybějící tabulky založí db/001_init.sql.",
+      "redirect URIs. Chybějící tabulky si web založí sám při prvním " +
+      "přihlášení; ručně je založí db/001_init.sql.",
   });
 }

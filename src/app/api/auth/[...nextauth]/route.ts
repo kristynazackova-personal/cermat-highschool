@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { handlers } from "@/auth";
+import { handlers, authEnabled } from "@/auth";
+import { ensureSchema } from "@/lib/server/db";
 
 /**
  * Za Railway se web o sobě sám nedozví, na jaké adrese běží.
@@ -34,5 +35,17 @@ function podleHlavicek(req: NextRequest): NextRequest {
   return new NextRequest(url, req);
 }
 
-export const GET = (req: NextRequest) => handlers.GET(podleHlavicek(req));
-export const POST = (req: NextRequest) => handlers.POST(podleHlavicek(req));
+/** Než se sáhne na účty, musí tabulky existovat. Po prvním běhu je to no-op. */
+async function pripraveno() {
+  if (authEnabled) await ensureSchema();
+}
+
+export const GET = async (req: NextRequest) => {
+  await pripraveno();
+  return handlers.GET(podleHlavicek(req));
+};
+
+export const POST = async (req: NextRequest) => {
+  await pripraveno();
+  return handlers.POST(podleHlavicek(req));
+};

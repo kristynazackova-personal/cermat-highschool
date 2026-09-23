@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { SCHEMA_SQL } from "./schema";
 
 /**
  * Minimální rozhraní, které potřebují datové funkce i Auth.js adaptér.
@@ -34,4 +35,36 @@ export function db(): Pool {
 /** Je vůbec databáze nakonfigurovaná? Web má fungovat i bez ní. */
 export function dbConfigured(): boolean {
   return Boolean(process.env.DATABASE_URL);
+}
+
+let schema: Promise<boolean> | null = null;
+
+/**
+ * Založí chybějící tabulky, nejvýš jednou za běh procesu.
+ *
+ * Bez tohohle kroku vypadá web nasazený a funkční, jenže přihlášení přes
+ * Google doběhne až k návratu a tam spadne na hlášce o chybné konfiguraci —
+ * adaptér sahá na tabulku, která neexistuje. Na chybu se přijde až po
+ * přihlášení, tedy nejpozději, jak to jde.
+ *
+ * Schéma je celé psané s IF NOT EXISTS a běží v transakci, takže opakované
+ * spuštění ani souběh dvou instancí nic nepřepíše.
+ *
+ * Když založení selže, web se kvůli tomu nezastaví: generování testů na
+ * databázi nezávisí a má fungovat dál. Co přesně chybí, řekne /api/diag.
+ */
+export function ensureSchema(): Promise<boolean> {
+  if (!schema) {
+    schema = db()
+      .query(SCHEMA_SQL)
+      .then(() => true)
+      .catch((e) => {
+        console.error("Nepodařilo se založit schéma databáze:", e);
+        // další požadavek to smí zkusit znovu — třeba byla databáze jen chvíli
+        // nedostupná a ruční zásah by nebyl potřeba
+        schema = null;
+        return false;
+      });
+  }
+  return schema;
 }
