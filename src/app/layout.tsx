@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import Providers from "@/components/providers";
+import AuthNav from "@/components/auth-nav";
 
 export const metadata: Metadata = {
   title: {
@@ -16,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="cs">
       <body className="min-h-dvh flex flex-col">
+        <Providers>
         <header
           className="no-print sticky top-0 z-40 border-b backdrop-blur"
           style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--bg) 88%, transparent)" }}
@@ -37,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/o-projektu" className="hidden sm:inline hover:underline underline-offset-4">
                 O projektu
               </Link>
+              <AuthNav />
             </nav>
           </div>
         </header>
@@ -65,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             .
           </div>
         </footer>
+        </Providers>
       </body>
     </html>
   );

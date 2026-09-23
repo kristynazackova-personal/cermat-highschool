@@ -38,6 +38,8 @@ export default function Runner() {
   const [selfScores, setSelfScores] = useState<Record<string, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  // Stav ukládání na server. Bez přihlášení zůstává "off" a nic se neděje.
+  const [sync, setSync] = useState<"off" | "loading" | "saved" | "saving">("off");
   const topRef = useRef<HTMLDivElement>(null);
 
   // Semínko určíme až na klientu — kdyby ho zvolil server, vyrenderoval by
@@ -73,6 +75,61 @@ export default function Runner() {
     return () => window.clearInterval(id);
   }, []);
 
+  // Navázání na rozdělaný test a jeho založení na serveru. Když uživatel
+  // přihlášený není, odpoví API `stored: false` a nic dalšího se neděje —
+  // web tím pádem funguje i bez databáze.
+  useEffect(() => {
+    if (!test) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/attempts?kod=${encodeURIComponent(test.code)}`);
+        const { attempt } = await r.json();
+        if (cancelled) return;
+        if (attempt && !attempt.submittedAt) {
+          setAnswers(attempt.answers ?? {});
+          setSelfScores(attempt.selfScores ?? {});
+        }
+        const open = await fetch("/api/attempts", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            subject: test.subject,
+            seed: test.seed,
+            code: test.code,
+            minutes: test.minutes,
+          }),
+        });
+        const { stored } = await open.json();
+        if (!cancelled) setSync(stored ? "saved" : "off");
+      } catch {
+        if (!cancelled) setSync("off");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [test]);
+
+  // Průběžné ukládání odpovědí, se sekundovým zklidněním po posledním úhozu.
+  useEffect(() => {
+    if (!test || sync === "off" || submitted) return;
+    const id = window.setTimeout(async () => {
+      setSync("saving");
+      try {
+        await fetch("/api/attempts", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code: test.code, answers, selfScores }),
+        });
+        setSync("saved");
+      } catch {
+        setSync("off");
+      }
+    }, 1000);
+    return () => window.clearTimeout(id);
+  }, [answers, selfScores, test, sync, submitted]);
+
   const left =
     deadline === null ? null : Math.max(0, Math.round((deadline - now) / 1000));
 
@@ -94,7 +151,13 @@ export default function Runner() {
     if (!test) return;
     setSubmitted(true);
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [test]);
+    // Výsledek si server spočítá sám ze semínka — klientovi věří jen odpovědi.
+    void fetch("/api/attempts/submit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ subject: test.subject, seed: test.seed, answers, selfScores }),
+    }).catch(() => {});
+  }, [test, answers, selfScores]);
 
   const newTest = useCallback(() => {
     setAnswers({});
@@ -148,6 +211,12 @@ export default function Runner() {
           </div>
         </div>
       </div>
+
+      {sync !== "off" && (
+        <p className="mb-3 text-xs" style={{ color: "var(--muted)" }}>
+          {sync === "saving" ? "Ukládám…" : "Průběžně uloženo — můžete se k testu vrátit později."}
+        </p>
+      )}
 
       <p
         className="mb-6 rounded-xl border px-4 py-3 text-sm leading-relaxed"

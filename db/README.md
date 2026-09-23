@@ -44,6 +44,17 @@ se body přidělují za celou úlohu, takže součet přes podúlohy by dal jin�
 číslo než skutečné hodnocení. Tahle tabulka je zrnem pro analytiku
 „které okruhy dělají potíže“.
 
+## Kde co běží
+
+Proměnné patří do **Railway → Variables** (tam je aplikace čte za běhu) a pro
+lokální vývoj do `.env.local`. Vývoj proti produkční databázi není potřeba:
+datová vrstva se ověřuje proti Postgresu spuštěnému v procesu
+(`npm run test:db`), takže se na ostrá data nesahá.
+
+Chybí-li `DATABASE_URL` nebo klíče od Googlu, **přihlašování se samo vypne**
+a web funguje jako dřív — generuje testy, procvičování i kartičky, jen si nic
+nepamatuje. Nasazení tím pádem nespadne, když proměnné ještě nejsou.
+
 ## Proměnné prostředí
 
 | Proměnná | K čemu |
