@@ -30,9 +30,9 @@ export const DOKONAVA = [
 
 export const INTERPUNKCE_VETY: Array<{ text: string; ok: boolean; why: string }> = [
   { text: "Jakýkoli dopis, který je určen do rukou ředitele může převzít pouze on.", ok: false, why: "Chybí čárka za vedlejší větou přívlastkovou — správně „…ředitele, může převzít…“." },
-  { text: "Uvádí se, že v jiných případech je situace složitější, ne-li dokonce neřešitelná.", ok: true, why: "Vedlejší věta je oddělena správně a spojení „ne-li“ se píše se spojovníkem." },
-  { text: "Po náročné cestě domů, trvající mnohem déle než obvykle, šla hned spát.", ok: true, why: "Přívlastek volný je oddělen z obou stran; před „než“ v tomto spojení čárka nepatří." },
-  { text: "Vysvětlila svým rodičům, proč přerušila studium, a proč jim to nejdřív tajila.", ok: false, why: "Dvě vedlejší věty v poměru slučovacím se spojkou a se čárkou neoddělují — správně „…studium a proč…“." },
+  { text: "Tvrdí se, že u menších obcí bývá řešení snazší, ne-li docela samozřejmé.", ok: true, why: "Vedlejší věta je oddělena správně a spojení „ne-li“ se píše se spojovníkem." },
+  { text: "Po dlouhé schůzi, protažené mnohem víc než obvykle, odjel rovnou domů.", ok: true, why: "Přívlastek volný je oddělen z obou stran; před „než“ v tomto spojení čárka nepatří." },
+  { text: "Popsal nám, kudy se k chatě jde, a kudy naopak chodit nemáme.", ok: false, why: "Dvě vedlejší věty v poměru slučovacím se spojkou a se čárkou neoddělují — správně „…jde a kudy…“." },
   { text: "Když se rozednilo, vyrazili jsme na cestu.", ok: true, why: "Vedlejší věta časová stojí před hlavní a je oddělena čárkou." },
   { text: "Nevěděl jestli má počkat, nebo odejít.", ok: false, why: "Před spojkou „jestli“ chybí čárka — správně „Nevěděl, jestli…“." },
   { text: "Petře, podej mi prosím tu knihu.", ok: true, why: "Oslovení je odděleno čárkou." },
@@ -48,18 +48,18 @@ export const INTERPUNKCE_VETY: Array<{ text: string; ok: boolean; why: string }>
 /* ------------------------------------------------------------------ */
 
 export const VETY_SPISOVNE = [
-  "Slibte mi to.", "Kněz sepjal ruce.", "Jano, zaujmi moje místo.",
-  "Jezte častěji ryby.", "Kamilo, už neplač.", "Zítra vstaňte v osm.",
-  "Bez něho byste zaspali.", "Karle, odnes to dovnitř.", "Oni to dokážou.",
-  "Zvedni to ze země.", "Půjčte mi tu knihu.", "Vezmi si teplý svetr.",
-  "Buďte tu včas.", "Napiš mi, až dorazíš.", "Řekněte jim to sami.",
-  "Nespěchejte na mě.",
+  "Podejte mi tu knihu.", "Poutník sepnul dlaně.", "Evo, uvolni mi místo.",
+  "Jezme víc zeleniny.", "Marku, už se nezlob.", "Ráno vstávejte v sedm.",
+  "Beze mne byste zabloudili.", "Aleno, dones to nahoru.", "Ony to určitě zvládnou.",
+  "Zvedni ten papír ze země.", "Půjč mi prosím sešit.", "Vezmi si pevné boty.",
+  "Přijďte prosím včas.", "Ozvi se, až dorazíš.", "Řekněte jim to laskavě sami.",
+  "Netlačte se na mě.", "Otevři to opatrně.", "Nechte tam ten vzkaz.",
 ];
 
 export const VETY_NESPISOVNE: Array<{ text: string; why: string }> = [
-  { text: "Oni ho chtěj v týmu.", why: "Spisovně „chtějí“ — tvar „chtěj“ je obecněčeský." },
+  { text: "Sousedi ho chtěj do party.", why: "Spisovně „chtějí“ — tvar „chtěj“ je obecněčeský." },
   { text: "Bratr o to zakop.", why: "Spisovně „zakopl“ — v příčestí minulém nesmí chybět -l." },
-  { text: "Klidně si sednite k nám.", why: "Spisovně „sedněte“ — tvar „sednite“ je nespisovný." },
+  { text: "Klidně si přisedníte k ohni.", why: "Spisovně „přisedněte“ — tvar „přisedníte“ je nespisovný." },
   { text: "Nesmíš na to zapomenót.", why: "Spisovně „zapomenout“." },
   { text: "Voni to nestihnou.", why: "Spisovně „oni“ — protetické v- je nespisovné." },
   { text: "Kluci to určitě udělaj.", why: "Spisovně „udělají“." },
@@ -101,10 +101,10 @@ export const GRAMATICKE_DOPLNENI: Array<{
   why: string;
 }> = [
   {
-    sentence: "Zámeček na Pardubicku se po několikaletém úsilí _____ komorní koncerty nebo divadelní představení.",
-    correct: "stal místem, kde se konají",
-    wrong: ["proměnil v místo, konajícím", "stal místem, kde se odehrává", "proměnil v místo, odehrávajícím"],
-    why: "Podmětem vedlejší věty jsou koncerty i představení (množné číslo), přísudek proto musí být „se konají“. Varianty s přechodníkovým tvarem jsou gramaticky vadné.",
+    sentence: "Obyvatelé obce sepsali petici, _____ požadují opravu lávky přes potok.",
+    correct: "v níž",
+    wrong: ["v němž", "kterou", "ve které by"],
+    why: "Podstatné jméno petice je rodu ženského, vztažné zájmeno proto musí být „v níž“. Tvar „v němž“ patří k rodu mužskému a střednímu, „kterou“ je ve špatném pádě a „ve které by“ mění způsob slovesa.",
   },
   {
     sentence: "Díky novému vybavení mohou lékaři _____ mnohem dříve.",
@@ -143,44 +143,44 @@ export const PROSTREDKY: ProstredekDef[] = [
     key: "epizeuxis",
     nazev: "epizeuxis",
     definice:
-      "jeho podstatou je, že se v rámci jednoho verše opakuje totéž ohebné slovo užité ve stejném tvaru",
+      "totéž ohebné slovo se v témž tvaru zopakuje dvakrát uvnitř jediného verše",
   },
   {
     key: "epifora",
     nazev: "epifora",
     definice:
-      "jeho podstatou je opakování téhož slova či více slov na samém konci bezprostředně po sobě jdoucích veršů",
+      "stejné slovo nebo sousloví uzavírá několik veršů, které jdou hned po sobě",
   },
   {
     key: "anafora",
     nazev: "anafora",
     definice:
-      "jeho podstatou je opakování téhož slova či více slov na samém začátku bezprostředně po sobě jdoucích veršů",
+      "stejné slovo nebo sousloví otevírá několik veršů, které jdou hned po sobě",
   },
   {
     key: "epanastrofa",
     nazev: "epanastrofa (palilogie)",
     definice:
-      "jeho podstatou je opakování téhož slova či více slov z konce jednoho verše na začátku bezprostředně následujícího verše",
+      "slovo nebo skupina slov, jimiž verš končí, se zopakuje hned na začátku verše následujícího",
   },
 ];
 
 /** Úryvky, v nichž je uvedený prostředek prokazatelně obsažen. */
 export const UKAZKY_PROSTREDKU: Array<{ prostredek: string; text: string }> = [
-  { prostredek: "epizeuxis", text: "Ho, nech modlení – skoč a pojď,\nskoč a pojď a mě doprovoď;\nměsíček svítí na cestu:\njá přišel pro svou nevěstu." },
-  { prostredek: "anafora", text: "Ach nechoď, nechoď na jezero,\nzůstaň dnes doma, moje dcero!\nJá měla zlý té noci sen:\nnechoď, dceruško, k vodě ven." },
-  { prostredek: "epifora", text: "Nedávejte mne ve vsi na hřbitov,\ntam bývá nářek sirotků a vdov,\ntam slzí hořkých mnoho plynulo:\nsrdéčko mé by hořem hynulo." },
-  { prostredek: "epanastrofa", text: "Což bych se bála? Tys se mnou\na oko boží nade mnou.\nPověz, můj milý, řekni přec,\nživ-li a zdráv je tvůj otec?" },
   { prostredek: "epizeuxis", text: "Tiše, tiše ať se nikdo nevzbudí,\nvítr venku o okenici buší.\nSpí už celý dům i lampa u vrat,\njen ta jedna svíce nechce zhasnout." },
+  { prostredek: "epizeuxis", text: "Jen dál, jen dál, ať cesta ubývá,\nza kopcem čeká tichá ves.\nKdo jednou vyšel, nezastaví,\ni kdyby přes noc padl les." },
   { prostredek: "anafora", text: "Kdo viděl ráno nad řekou,\nkdo slyšel zvon na starém mostě,\nten ví, jak tiše leží kraj,\nkdyž slunce teprv vstává." },
+  { prostredek: "anafora", text: "Vždycky se vracel touž pěšinou,\nvždycky si sedl na týž kámen,\nvždycky se díval, jak řeka plyne,\na nikdy neřekl ani slovo." },
   { prostredek: "epifora", text: "Za oknem byla tma,\nv komoře byla tma,\na v srdci, které čekalo,\nusedla také tma." },
+  { prostredek: "epifora", text: "Na jaře kvetla jabloň bílá,\nv létě tu stála jabloň bílá,\na když pak přišel první mráz,\nzbyla tu sama jabloň bílá." },
   { prostredek: "epanastrofa", text: "A z dálky zněla píseň,\npíseň, již nikdo neznal,\nznal ji jen starý vítr\nnad hladinou rybníka." },
+  { prostredek: "epanastrofa", text: "Nad střechou krouží černý pták,\nčerný pták hledá cestu zpět,\na cesta zpět je zarostlá\ntravou, co nikdo nepokosil." },
 ];
 
 /** Úryvky bez opakovacích prostředků — slouží jako nesprávné možnosti. */
 export const UKAZKY_BEZ_PROSTREDKU: string[] = [
-  "Pověz, můj milý, řekni jen,\njak je tvůj domek upraven?\nČistá světnička? Veselá?\nA zdali blízko kostela?",
-  "Stokrát jsem tě prosila,\npřimlouvala sladce,\nbys mi na čas, na kratičký,\ndovolil k mé matce.",
+  "Po dešti zůstala na cestě kaluž,\nobrátil se v ní celý svět vzhůru nohama.\nChlapec do ní skočil oběma nohama\na svět se rozprskl na tisíc střípků.",
+  "Na kraji lesa stojí stará bouda,\nstřecha jí dávno propadla dovnitř.\nNikdo už dnes nepamatuje,\nkdo a proč ji tam kdysi postavil.",
   "Nad polem stál bílý sloup dýmu,\nv trávě chladla poslední rosa.\nZ lesa se ozval osamělý pták\na pak už bylo jenom ticho.",
   "Voda se leskla mezi kameny,\nna břehu ležel starý člun.\nNikdo už dávno nevyplul\nna druhou stranu jezera.",
 ];

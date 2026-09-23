@@ -345,7 +345,7 @@ export const rovnice: MathGen = (rng, points) => {
       `${A === 1 ? "" : A}x ${B >= 0 ? "+" : "−"} ${Math.abs(B) === 1 ? "" : Math.abs(B)}y = ${n(C)}`;
 
     return {
-      prompt: "V záznamovém archu uveďte v obou částech úlohy celý postup řešení (zkoušku nezapisujte).",
+      prompt: "U obou částí zapište celý postup řešení. Zkoušku psát nemusíte.",
       parts: [
         work("1", `Řešte rovnici:\n${eq1}`, `x = ${n(root)}`, points - half, {
           accept: [n(root), String(root), cz(root)],
@@ -385,7 +385,7 @@ export const rovnice: MathGen = (rng, points) => {
     `(${m} + y) / ${q} = ${rFrac.isInt ? cz(rFrac.value) : f(rFrac)} − (${sVal} + ${t}y) / ${Q}`;
 
   return {
-    prompt: "V záznamovém archu uveďte v obou částech úlohy celý postup řešení (zkoušku nezapisujte).",
+    prompt: "U obou částí zapište celý postup řešení. Zkoušku psát nemusíte.",
     parts: [
       work("1", `Řešte rovnici:\n${eq1}`, `x = ${n(root)}`, points - half, {
         accept: [n(root), String(root), cz(root)],
@@ -425,12 +425,12 @@ export const procenta: MathGen = (rng, points, ctx) => {
     return {
       stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
       stimulus:
-        `František dal do svého salátu obsahujícího ${cz(total)} g rajčat celkem ${cz(used2)} g cukru.\n` +
-        `Podle receptu však do salátu patří na každých ${cz(base)} g rajčat pouze ${cz(perBase)} g cukru.`,
+        `Marek zadělal těsto z ${cz(total)} g mouky a přidal do něj celkem ${cz(used2)} g soli.\n` +
+        `Podle receptu přitom na každých ${cz(base)} g mouky patří jen ${cz(perBase)} g soli.`,
       prompt: "Vypočtěte,",
       parts: [
-        open("1", "kolik gramů cukru měl dát František podle receptu do svého salátu,", String(correct), p1, { unit: "g" }),
-        open("2", "o kolik procent více cukru dal do salátu, než měl dát podle receptu.", "100", p2, { unit: "%" }),
+        open("1", "kolik gramů soli měl Marek podle receptu do těsta přidat,", String(correct), p1, { unit: "g" }),
+        open("2", "o kolik procent soli přidal víc, než měl podle receptu.", "100", p2, { unit: "%" }),
       ],
       solution:
         `5.1  ${cz(total)} : ${cz(base)} = ${mult}, tedy ${mult} · ${cz(perBase)} = ${cz(correct)} g cukru.\n` +
@@ -442,12 +442,12 @@ export const procenta: MathGen = (rng, points, ctx) => {
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus:
-      `František dal do svého salátu obsahujícího ${cz(total)} g rajčat celkem ${cz(used)} g cukru.\n` +
-      `Podle receptu však do salátu patří na každých ${cz(base)} g rajčat pouze ${cz(perBase)} g cukru.`,
+      `Marek zadělal těsto z ${cz(total)} g mouky a přidal do něj celkem ${cz(used)} g soli.\n` +
+      `Podle receptu přitom na každých ${cz(base)} g mouky patří jen ${cz(perBase)} g soli.`,
     prompt: "Vypočtěte,",
     parts: [
-      open("1", "kolik gramů cukru měl dát František podle receptu do svého salátu,", String(correct), p1, { unit: "g" }),
-      open("2", "o kolik procent více cukru dal do salátu, než měl dát podle receptu.", String(over), p2, { unit: "%" }),
+      open("1", "kolik gramů soli měl Marek podle receptu do těsta přidat,", String(correct), p1, { unit: "g" }),
+      open("2", "o kolik procent soli přidal víc, než měl podle receptu.", String(over), p2, { unit: "%" }),
     ],
     solution:
       `5.1  ${cz(total)} g rajčat je ${cz(total)} : ${cz(base)} = ${mult}násobek receptové dávky, ` +
@@ -476,11 +476,11 @@ export const modelovani: MathGen = (rng, points, ctx) => {
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus:
-      `Na vánočním jarmarku prodávali ve stánku pouze čaj a punč.\n` +
-      `Čaj prodávali za ${cz(cheap)} korun a cena punče byla o ${up} % vyšší než cena čaje.`,
+      `Ve školním bufetu prodávali jen dva druhy nápojů — čaj a kakao.\n` +
+      `Čaj stál ${cz(cheap)} korun a kakao bylo o ${up} % dražší než čaj.`,
     prompt: "",
     parts: [
-      open("1", "Vypočtěte v korunách cenu jednoho punče.", String(dear), pts[0], { unit: "Kč" }),
+      open("1", "Vypočtěte v korunách cenu jednoho kakaa.", String(dear), pts[0], { unit: "Kč" }),
       open(
         "2",
         `Počet čajů, které ve stánku prodali, označíme x.\n` +
@@ -491,19 +491,19 @@ export const modelovani: MathGen = (rng, points, ctx) => {
       ),
       open(
         "3",
-        `Ve stánku prodali celkem ${cz(total)} nápojů a utržili za ně dohromady ${cz(revenue)} korun.\n` +
-          `Vypočtěte, kolik čajů ve stánku prodali.`,
+        `V bufetu prodali celkem ${cz(total)} nápojů a utržili za ně dohromady ${cz(revenue)} korun.\n` +
+          `Vypočtěte, kolik čajů v bufetu prodali.`,
         String(cheapCount),
         pts[2],
       ),
     ],
     solution:
-      `6.1  ${up} % z ${cz(cheap)} Kč je ${cz((cheap * up) / 100)} Kč, punč tedy stojí ` +
+      `6.1  ${up} % z ${cz(cheap)} Kč je ${cz((cheap * up) / 100)} Kč, kakao tedy stojí ` +
       `${cz(cheap)} + ${cz((cheap * up) / 100)} = ${cz(dear)} Kč.\n` +
       `6.2  Za x čajů po ${cz(cheap)} Kč utrží ${cheap}x korun.\n` +
-      `6.3  Punčů prodali (${cz(total)} − x), takže ${cheap}x + ${dear}(${cz(total)} − x) = ${cz(revenue)}.\n` +
+      `6.3  Kakaí prodali (${cz(total)} − x), takže ${cheap}x + ${dear}(${cz(total)} − x) = ${cz(revenue)}.\n` +
       `     ${cheap}x + ${cz(dear * total)} − ${dear}x = ${cz(revenue)}  ⟹  ${cz(dear - cheap)}x = ${cz(dear * total - revenue)}  ⟹  x = ${cz(cheapCount)}.\n` +
-      `     Prodali ${cz(cheapCount)} čajů a ${cz(dearCount)} punčů.`,
+      `     Prodali ${cz(cheapCount)} čajů a ${cz(dearCount)} kakaí.`,
   };
 };
 
@@ -698,18 +698,18 @@ function constructionVariants(rng: Rng): ConstructionTask[] {
 
   return [
     {
-      stimulus: "V rovině leží bod A a přímky b, c.",
+      stimulus: "V rovině je dán bod A a dvě přímky, b a c.",
       figure: givensSvg([
         { t: "line", x1: 20, y1: jitter(40, 10), x2: 300, y2: jitter(70, 10), label: "b" },
         { t: "line", x1: 30, y1: jitter(180, 12), x2: 300, y2: jitter(150, 12), label: "c" },
         { t: "point", x: jitter(110, 20), y: jitter(115, 10), label: "A" },
       ]),
       prompt:
-        "Bod A je vrchol trojúhelníku ABC.\n" +
-        "Strana AB tohoto trojúhelníku je kolmá k přímce b a vrchol B leží na přímce b.\n" +
+        "Bod A má být vrcholem trojúhelníku ABC.\n" +
+        "Vrchol B leží na přímce b a úsečka AB je na přímku b kolmá.\n" +
         `Strana BC je o ${rng.int(2, 4)} cm delší než strana AB a vrchol C leží na přímce c.\n` +
-        "Sestrojte vrcholy B, C trojúhelníku ABC, označte je písmeny a trojúhelník narýsujte.\n" +
-        "Najděte všechna řešení.",
+        "Sestrojte oba zbývající vrcholy, popište je a trojúhelník narýsujte.\n" +
+        "Řešení může být víc než jedno — najděte všechna.",
       postup: [
         "p; p ⊥ b, A ∈ p",
         "B; B ∈ p ∩ b",
@@ -724,7 +724,7 @@ function constructionVariants(rng: Rng): ConstructionTask[] {
         "1 b — kolmice nepřesná a současně další nedostatek. 0 b — zcela chybná konstrukce.",
     },
     {
-      stimulus: "V rovině leží body A, O, P.",
+      stimulus: "V rovině jsou dány tři body: A, O a P.",
       figure: givensSvg([
         { t: "point", x: jitter(70, 15), y: jitter(150, 15), label: "A" },
         { t: "point", x: jitter(150, 15), y: jitter(120, 12), label: "O" },
@@ -732,9 +732,9 @@ function constructionVariants(rng: Rng): ConstructionTask[] {
       ]),
       prompt:
         "Bod A je vrchol pravidelného šestiúhelníku ABCDEF.\n" +
-        "Přímka OP je osa strany AB tohoto šestiúhelníku.\n" +
-        "Na polopřímce OP leží střed souměrnosti S šestiúhelníku ABCDEF.\n" +
-        "Sestrojte vrcholy B, C, D, E, F šestiúhelníku, označte je písmeny a šestiúhelník narýsujte.",
+        "Přímka procházející body O a P je osou jeho strany AB.\n" +
+        "Střed souměrnosti tohoto šestiúhelníku leží na polopřímce OP.\n" +
+        "Sestrojte zbývajících pět vrcholů, popište je a šestiúhelník narýsujte.",
       postup: [
         "o; o = přímka OP (osa strany AB)",
         "B; B je obrazem bodu A v osové souměrnosti podle o",
@@ -747,7 +747,7 @@ function constructionVariants(rng: Rng): ConstructionTask[] {
         "2 b — správná konstrukce i označení. 1 b — mírná nepřesnost v jedné části. 0 b — zcela chybná konstrukce.",
     },
     {
-      stimulus: "V rovině leží body A, B, D.",
+      stimulus: "V rovině jsou dány tři body: A, B a D.",
       figure: givensSvg([
         { t: "point", x: jitter(80, 15), y: jitter(60, 10), label: "A" },
         { t: "point", x: jitter(230, 15), y: jitter(70, 10), label: "B" },
@@ -755,9 +755,9 @@ function constructionVariants(rng: Rng): ConstructionTask[] {
       ]),
       prompt:
         "Body A a B jsou vrcholy pravoúhlého trojúhelníku ABC s pravým úhlem při vrcholu C.\n" +
-        "Body B a D jsou vrcholy pravoúhlého trojúhelníku BCD s pravým úhlem při vrcholu C.\n" +
-        "(Vrcholy B a C jsou společnými vrcholy obou trojúhelníků.)\n" +
-        "Sestrojte vrchol C, označte ho písmenem a narýsujte trojúhelníky ABC a BCD.",
+        "Tytéž body B a D jsou spolu s C vrcholy dalšího trojúhelníku, rovněž s pravým úhlem u C.\n" +
+        "(Body B a C mají oba trojúhelníky společné.)\n" +
+        "Sestrojte bod C, popište jej a oba trojúhelníky narýsujte.",
       postup: [
         "k₁; Thaletova kružnice nad průměrem AB",
         "k₂; Thaletova kružnice nad průměrem BD",
@@ -769,16 +769,16 @@ function constructionVariants(rng: Rng): ConstructionTask[] {
         "1 b — sestrojena jen jedna kružnice. 0 b — zcela chybná konstrukce.",
     },
     {
-      stimulus: "V rovině leží bod A a přímka o.",
+      stimulus: "V rovině je dán bod A a přímka o.",
       figure: givensSvg([
         { t: "line", x1: 30, y1: jitter(170, 12), x2: 295, y2: jitter(55, 12), label: "o" },
         { t: "point", x: jitter(95, 15), y: jitter(75, 12), label: "A" },
       ]),
       prompt:
         "Bod A je vrchol rovnoběžníku ABCD.\n" +
-        "Přímka o je osou souměrnosti tohoto rovnoběžníku a leží na ní vrcholy B, D.\n" +
-        "Úhlopříčka BD rovnoběžníku ABCD je dvakrát delší než úhlopříčka AC.\n" +
-        "Sestrojte vrcholy B, C, D, označte je písmeny a rovnoběžník narýsujte.",
+        "Přímka o je jeho osou souměrnosti a procházejí po ní vrcholy B a D.\n" +
+        "Úhlopříčka BD je přitom dvojnásobkem úhlopříčky AC.\n" +
+        "Sestrojte zbývající tři vrcholy, popište je a rovnoběžník narýsujte.",
       postup: [
         "p; p ⊥ o, A ∈ p",
         "S; S ∈ p ∩ o (střed rovnoběžníku)",

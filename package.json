@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx src/lib/cermat/selftest.ts",
-    "test:db": "tsx src/lib/server/attempts.check.ts"
+    "test:db": "tsx src/lib/server/attempts.check.ts",
+    "check:overlap": "node tools-overlap.mjs"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.3",

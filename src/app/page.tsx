@@ -79,8 +79,9 @@ export default function Home() {
       >
         Jedno kliknutí vygeneruje celý cvičný test k jednotné přijímací zkoušce na
         čtyřleté obory — se stejnou stavbou, stejným rozložením typů úloh i stejným
-        bodováním, jaké má skutečná zkouška. Úlohy se generují znovu pokaždé, takže
-        se nedají naučit nazpaměť.
+        bodováním, jaké má skutečná zkouška. Matematické úlohy se počítají pokaždé
+        znovu, takže stejná čísla neuvidíte dvakrát; u češtiny se mění výběr úloh,
+        výchozí texty i pořadí nabídek.
       </p>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -151,7 +152,7 @@ export default function Home() {
             ],
             [
               "Generování",
-              "Na každou pozici se dosadí nově vytvořená úloha. Čísla, zadání i pořadí nabídek jsou pokaždé jiné.",
+              "Na každou pozici se dosadí úloha odpovídajícího typu — v matematice s nově spočítanými čísly, v češtině vybraná ze zásoby úloh.",
             ],
             [
               "Vyhodnocení",

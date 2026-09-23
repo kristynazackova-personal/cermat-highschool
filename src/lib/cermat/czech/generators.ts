@@ -200,8 +200,8 @@ export const interpunkceAn: CzechGen = (rng, points) => {
   const chosen = rng.sample(INTERPUNKCE_VETY, 4);
   return {
     prompt:
-      "Rozhodněte o každém z následujících větných celků, zda je v něm správně " +
-      "zapsána interpunkce (A), nebo ne (N).",
+      "U každého z následujících větných celků rozhodněte, zda je v něm " +
+      "interpunkce zapsána správně (A), nebo ne (N).",
     parts: anoNeGroup(
       chosen.map((c) => ({ text: c.text, truth: c.ok, why: c.why })),
       points,
@@ -270,9 +270,9 @@ export const vid: CzechGen = (rng, points) => {
   const keyOf = (pattern: string) => offer[offerItems.findIndex((t) => t.pattern === pattern)].key;
 
   const statements = [
-    { text: "V této trojici jsou všechna slovesa nedokonavá.", pattern: "NNN" },
-    { text: "V této trojici jsou první dvě slovesa dokonavá a třetí je nedokonavé.", pattern: "DDN" },
-    { text: "V této trojici jsou první dvě slovesa nedokonavá a třetí je dokonavé.", pattern: "NND" },
+    { text: "Všechna tři slovesa této trojice jsou nedokonavá.", pattern: "NNN" },
+    { text: "První dvě slovesa této trojice jsou dokonavá, třetí nedokonavé.", pattern: "DDN" },
+    { text: "První dvě slovesa této trojice jsou nedokonavá, třetí dokonavé.", pattern: "NND" },
   ];
   const ordered = rng.shuffle(statements);
 
@@ -334,8 +334,8 @@ export const nespisovneTvary: CzechGen = (rng, points) => {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus,
     prompt:
-      "Ve výchozím textu je uvedeno dvanáct vět: ve třech z nich se vyskytuje nespisovný " +
-      "tvar slovesa. Najděte tyto tři věty a napište jejich čísla.\n" +
+      "Ve výchozím textu je dvanáct vět. Právě ve třech z nich je sloveso v nespisovném " +
+      "tvaru — napište čísla těchto tří vět.\n" +
       "(Za chybu se považuje jak neuvedení hledaného čísla, tak zapsání čísla, které zadání neodpovídá.)",
     parts: wordlist(wanted.map((w) => String(w.n))),
     solution:

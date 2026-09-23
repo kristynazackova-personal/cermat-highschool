@@ -15,9 +15,8 @@ export default function AboutPage() {
         <p>
           Na přijímačky se dá cvičit na skutečných testech z minulých let — je jich ale
           konečný počet a po pár průchodech si je člověk spíš pamatuje, než počítá. Tenhle
-          web řeší právě to: každé kliknutí vygeneruje celý test znovu, se stejnou stavbou
-          jako ta skutečná zkouška, ale s jinými čísly, jinými větami a jiným pořadím
-          nabídek.
+          web řeší právě to: každé kliknutí složí celý test znovu, se stejnou stavbou
+          jako ta skutečná zkouška.
         </p>
 
         <div>
@@ -28,10 +27,13 @@ export default function AboutPage() {
             Žádná umělá inteligence a žádné volání na server — test se skládá přímo ve
             vašem prohlížeči z generátorů napsaných na míru každému typu úlohy. Matematika
             počítá v přesné zlomkové aritmetice, takže výsledek nikdy nevznikne
-            zaokrouhlením; geometrické úlohy si samy kreslí obrázek. U češtiny se jazykový
-            obsah negeneruje šablonou — všechny věty, ukázky a nabídky jsou předem ověřené
-            a generátor z nich vybírá a míchá pořadí. Šablona by v češtině snadno vyrobila
-            tvar, který neexistuje, nebo otázku s víc než jednou správnou odpovědí.
+            zaokrouhlením, a čísla jsou pokaždé nová; geometrické úlohy si samy kreslí
+            obrázek.\n\nU češtiny je to jinak, a stojí za to to říct rovnou: jazykový obsah
+            se negeneruje šablonou. Všechny věty, ukázky a nabídky jsou předem napsané
+            a ověřené a generátor z nich vybírá a míchá pořadí. Šablona by v češtině
+            snadno vyrobila tvar, který neexistuje, nebo otázku s víc než jednou správnou
+            odpovědí. Zásoba je konečná, takže po několika testech se výchozí texty
+            začnou opakovat — u matematiky se to nestane.
           </p>
         </div>
 
