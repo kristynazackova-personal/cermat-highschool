@@ -64,6 +64,24 @@ nepamatuje. Nasazení tím pádem nespadne, když proměnné ještě nejsou.
 | `AUTH_GOOGLE_ID` | OAuth client ID z Google Cloud Console |
 | `AUTH_GOOGLE_SECRET` | OAuth client secret |
 | `AUTH_TRUST_HOST` | `true` — nutné mimo Vercel, tedy i na Railway |
+| `AUTH_URL` | `https://cermat-highschool-production.up.railway.app` — nepovinné, ale spolehlivější než odvozování z hlaviček |
 
-Callback URL, kterou je potřeba zadat v Google Cloud Console:
-`https://<doména>/api/auth/callback/google`.
+### Callback URL pro Google Cloud Console
+
+Do pole **Authorized redirect URIs** patří přesně tohle, znak po znaku:
+
+```
+https://cermat-highschool-production.up.railway.app/api/auth/callback/google
+```
+
+a pro místní vývoj ještě:
+
+```
+http://localhost:3000/api/auth/callback/google
+```
+
+Pole **Authorized JavaScript origins** zůstává prázdné — Auth.js používá
+serverové přesměrování, ne tokenový tok v prohlížeči.
+
+Nejčastější příčina chyby `redirect_uri_mismatch` je překlep v adrese:
+zdvojené `https://`, lomítko navíc na konci nebo otazník za adresou.
