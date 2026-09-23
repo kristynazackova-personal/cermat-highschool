@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { db, dbConfigured } from "@/lib/server/db";
+import { zahozeneAdresy } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,9 @@ export async function GET() {
       "x-forwarded-proto": h.get("x-forwarded-proto"),
     },
     authUrlNastavena: Boolean(authUrl),
+    // prázdná proměnná může znamenat dvojí: nebyla nastavená, nebo ukazovala
+    // na localhost a web ji zahodil. Bez rozlišení se hledá špatným směrem.
+    authUrlZahozena: zahozeneAdresy,
     puvod,
     navratovaAdresa: puvod ? `${puvod}/api/auth/callback/google` : null,
     promenne: {

@@ -19,6 +19,13 @@ import { db } from "@/lib/server/db";
  *
  * Děje se to před voláním NextAuth(), protože právě tam se proměnné čtou.
  */
+/**
+ * Které proměnné se zahodily. Bez téhle stopy nejde ve výpisu rozeznat
+ * „proměnná nebyla nastavená“ od „byla nastavená špatně a zahodili jsme ji“ —
+ * v obou případech je pak prázdná, a to jednou svedlo hledání špatným směrem.
+ */
+export const zahozeneAdresy: string[] = [];
+
 function zahodMylnouAdresu(jmeno: "AUTH_URL" | "NEXTAUTH_URL") {
   const v = process.env[jmeno];
   if (!v) return;
@@ -28,10 +35,12 @@ function zahodMylnouAdresu(jmeno: "AUTH_URL" | "NEXTAUTH_URL") {
   } catch {
     // nesmyslná hodnota je k ničemu stejně jako localhost
     delete process.env[jmeno];
+    zahozeneAdresy.push(jmeno);
     return;
   }
   if (host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "0.0.0.0") {
     delete process.env[jmeno];
+    zahozeneAdresy.push(jmeno);
   }
 }
 
