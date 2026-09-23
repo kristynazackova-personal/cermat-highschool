@@ -227,6 +227,61 @@ function PartView({
         </div>
       )}
 
+      {/* seřazení částí textu — na každou pozici jedno písmeno */}
+      {part.format === "order" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {Array.from({ length: task.parts.length }, (_, i) => String.fromCharCode(65 + i)).map((k) => {
+            const picked = value === k;
+            const isRight = showAnswers && k === part.answer;
+            const isWrongPick = showAnswers && picked && k !== part.answer;
+            return (
+              <button
+                key={k}
+                type="button"
+                disabled={locked}
+                onClick={() => onChange(k)}
+                aria-pressed={picked}
+                aria-label={`Na ${part.id}. místo část ${k}`}
+                className="h-9 w-9 rounded-lg border text-sm font-semibold tabular-nums"
+                style={{
+                  borderColor: isRight ? "var(--good)" : isWrongPick ? "var(--bad)" : picked ? "var(--accent)" : "var(--line)",
+                  background: isRight ? "var(--good-soft)" : isWrongPick ? "var(--bad-soft)" : picked ? "var(--accent-soft)" : "var(--surface)",
+                  color: "var(--ink)",
+                }}
+              >
+                {k}
+              </button>
+            );
+          })}
+          {showAnswers && (
+            <span className="text-sm" style={{ color: "var(--muted)" }}>
+              správně: <strong style={{ color: "var(--good)" }}>{part.answer}</strong>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* vypsání slova nalezeného ve výchozím textu */}
+      {part.format === "wordlist" && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={value}
+            disabled={locked}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={`${part.id}.`}
+            aria-label={`Úloha ${task.n}, ${part.id}. hledané slovo`}
+            className="w-52 rounded-lg border px-3 py-2 text-[15px] outline-none focus:ring-2"
+            style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+          />
+          {showAnswers && (
+            <span className="text-sm" style={{ color: "var(--muted)" }}>
+              hledalo se mj. <strong style={{ color: "var(--good)" }}>{part.answer}</strong>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* otevřená úloha s výsledkem */}
       {(part.format === "open-result" || part.format === "open-work") && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -395,6 +450,23 @@ function TaskView({
             ))}
           </ul>
         </div>
+      )}
+
+      {task.scoring === "errors" && (
+        <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
+          Hodnotí se počet chyb, ne pořadí zápisu. Chybou je i slovo, které zadání
+          nevyhovuje — tipovat naslepo se proto nevyplácí.
+        </p>
+      )}
+      {task.scoring === "all-or-nothing" && (
+        <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
+          Body se udělují pouze za celé správné pořadí.
+        </p>
+      )}
+      {task.scoring === "stepped" && (
+        <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
+          Vše správně → {task.points} b, jedna chyba → {task.points / 2} b, dvě a více chyb → 0 b.
+        </p>
       )}
 
       {task.parts.map((part) => {

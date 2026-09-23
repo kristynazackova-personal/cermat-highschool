@@ -1,66 +1,65 @@
 import type { Rng } from "../rng";
-import type { Part } from "../types";
+import type { Choice, Part } from "../types";
 import type { GenResult } from "../math/generators";
-import { PASSAGES, ORDERED_TEXTS, type Passage } from "./texts";
+import { PASSAGES, type Passage } from "./texts";
 import {
   PRAVOPIS_SKUPINY,
-  PRAVOPIS_CHYBA,
-  SHODA,
-  MNE,
-  INTERPUNKCE,
   SYNONYMA,
   ANTONYMA,
   TVORENI_SLOV,
   RCENI,
   SLOVNI_DRUHY,
-  KATEGORIE,
   VZORY,
-  TVARY_CHYBA,
   ZAKLADNI_DVOJICE,
   VETNE_CLENY,
   SOUVETI,
   type PickItem,
-  type FillItem,
   type OneOfItem,
 } from "./lexicon";
-import { LIT_DRUHY, ZANRY, TROPY, RYMY, LIT_POJMY, STYLY, UTVARY } from "./literature";
+import { LIT_DRUHY, ZANRY, RYMY, STYLY, UTVARY } from "./literature";
+import {
+  NEDOKONAVA,
+  DOKONAVA,
+  INTERPUNKCE_VETY,
+  VETY_SPISOVNE,
+  VETY_NESPISOVNE,
+  TVAR_SLOVA,
+  GRAMATICKE_DOPLNENI,
+  PROSTREDKY,
+  UKAZKY_PROSTREDKU,
+  UKAZKY_BEZ_PROSTREDKU,
+} from "./banks2";
+import { TEXTY_S_CHYBAMI, TEXTY_S_NESPISOVNYMI, SERAZENI_TEXTY } from "./texty2";
 
 /**
- * Sdílený kontext testu. Vybírá se jednou při sestavování testu, aby se
- * úlohy 1–4 vázaly k témuž výchozímu textu a aby tři úlohy na skladbu
- * nepracovaly se stejným souvětím.
+ * Sdílený kontext testu. Vybírá se jednou při sestavování testu:
+ * tři různé výchozí texty (každá dichotomická skupina A/N se váže
+ * k jinému) a tři různá souvětí pro úlohy na skladbu.
  */
 export type CzechCtx = {
-  passage: Passage;
-  /** Tři různá souvětí — pro počet vět, druh souvětí a druh vedlejší věty. */
+  passages: [Passage, Passage, Passage];
   souveti: [SouvetiItem, SouvetiItem, SouvetiItem];
 };
 
 type SouvetiItem = (typeof SOUVETI)[number];
 
-/** Sestaví kontext: výchozí text a tři různá souvětí. */
 export function makeCzechCtx(rng: Rng): CzechCtx {
+  const p = rng.sample(PASSAGES, 3) as [Passage, Passage, Passage];
   const withVv = SOUVETI.filter((s) => s.vedlejsi !== null);
   const vv = rng.pick(withVv);
   const rest = rng.shuffle(SOUVETI.filter((s) => s !== vv));
-  return { passage: rng.pick(PASSAGES), souveti: [rest[0], rest[1], vv] };
+  return { passages: p, souveti: [rest[0], rest[1], vv] };
 }
 
 export type CzechGen = (rng: Rng, points: number, ctx: CzechCtx) => GenResult;
 
-const KEYS = ["A", "B", "C", "D", "E"];
+const KEYS = ["A", "B", "C", "D", "E", "F"];
 
-/** Uzavřená úloha — nabídka se vždy zamíchá, aby správná odpověď nebyla na stejném místě. */
-function pick4(
-  rng: Rng,
-  prompt: string,
-  correct: string,
-  wrong: string[],
-  points: number,
-  id = "",
-): Part {
-  const tagged = [{ text: correct, ok: true }, ...wrong.map((t) => ({ text: t, ok: false }))];
-  const mixed = rng.shuffle(tagged);
+/* --------------------------- pomocné stavby --------------------------- */
+
+/** Uzavřená úloha s nabídkou A–D; pořadí se vždy zamíchá. */
+function pick4(rng: Rng, prompt: string, correct: string, wrong: string[], points: number, id = ""): Part {
+  const mixed = rng.shuffle([{ text: correct, ok: true }, ...wrong.map((t) => ({ text: t, ok: false }))]);
   return {
     id,
     prompt,
@@ -71,112 +70,427 @@ function pick4(
   };
 }
 
-/** Úloha typu „ve které možnosti…“ — nabídka je celá daná, míchá se pořadí. */
 function fromPick(rng: Rng, item: PickItem, prompt: string, points: number): Part {
-  return pick4(
-    rng,
-    prompt,
-    item.options[item.correct],
-    item.options.filter((_, i) => i !== item.correct),
-    points,
-  );
+  return pick4(rng, prompt, item.options[item.correct], item.options.filter((_, i) => i !== item.correct), points);
 }
 
-function splitPoints(total: number, count: number): number[] {
-  const base = Math.floor(total / count);
-  const out = Array(count).fill(base);
-  let rest = total - base * count;
-  for (let i = 0; rest > 0; i++, rest--) out[i] += 1;
-  return out;
-}
-
-/* ------------------------------------------------------------------ */
-/* 1.–4. Porozumění výchozímu textu                                    */
-/* ------------------------------------------------------------------ */
-
-export const porozumeniObsah: CzechGen = (rng, points, { passage }) => ({
-  prompt: passage.obsah.q,
-  parts: [pick4(rng, "", passage.obsah.correct, [...passage.obsah.wrong], points)],
-  solution: `Odpověď je uvedena ve výchozím textu přímo. Ostatní možnosti text buď neuvádí, nebo jim odporuje.`,
-});
-
-export const porozumeniTvrzeni: CzechGen = (rng, points, { passage }) => {
-  const chosen = rng.sample(passage.tvrzeni, 3);
-  const pts = splitPoints(points, 3);
+function oneOf(rng: Rng, item: OneOfItem, prompt: string, points: number): GenResult {
   return {
-    prompt: "Rozhodněte o každém z následujících tvrzení, zda odpovídá výchozímu textu (ANO), či nikoli (NE).",
-    parts: chosen.map((t, i) => ({
-      id: ["a", "b", "c"][i],
-      prompt: t.text,
-      format: "truefalse" as const,
-      choices: [
-        { key: "ANO", text: "ANO" },
-        { key: "NE", text: "NE" },
-      ],
-      answer: t.truth ? "ANO" : "NE",
-      points: pts[i],
-    })),
-    solution: chosen
-      .map((t, i) => `${["a", "b", "c"][i]}) ${t.truth ? "ANO" : "NE"} — ${t.why}`)
-      .join("\n"),
+    prompt,
+    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    solution: `Správně: ${item.correct} — ${item.why}`,
+  };
+}
+
+/** Dichotomická skupina A/N — vždy čtyři tvrzení, hodnocená stupňovitě. */
+function anoNeGroup(
+  claims: Array<{ text: string; truth: boolean; why: string }>,
+  points: number,
+): Part[] {
+  return claims.map((c, i) => ({
+    id: String(i + 1),
+    prompt: c.text,
+    format: "truefalse" as const,
+    choices: [
+      { key: "A", text: "A" },
+      { key: "N", text: "N" },
+    ],
+    answer: c.truth ? "A" : "N",
+    points: 0, // body se přidělují za celou skupinu
+  }));
+}
+
+/** Úloha „vypište N slov“ — pořadí zápisu nerozhoduje, hodnotí se počet chyb. */
+function wordlist(expected: string[], accept: string[][] = []): Part[] {
+  return expected.map((w, i) => ({
+    id: String(i + 1),
+    prompt: "",
+    format: "wordlist" as const,
+    answer: w,
+    accept: accept[i] ?? [],
+    points: 0, // body se přidělují za celou úlohu podle počtu chyb
+  }));
+}
+
+/* ================================================================== */
+/* Úlohy vázané k výchozímu textu                                      */
+/* ================================================================== */
+
+export const textObsah: CzechGen = (rng, points, ctx) => {
+  const p = ctx.passages[0];
+  return {
+    prompt: p.obsah.q,
+    parts: [pick4(rng, "", p.obsah.correct, [...p.obsah.wrong], points)],
+    solution: "Odpověď je ve výchozím textu uvedena přímo; ostatní možnosti text neuvádí, nebo jim odporuje.",
   };
 };
 
-export const porozumeniMyslenka: CzechGen = (rng, points, { passage }) => ({
-  prompt: "Která z možností nejlépe vystihuje hlavní myšlenku výchozího textu?",
-  parts: [pick4(rng, "", passage.myslenka.correct, [...passage.myslenka.wrong], points)],
-  solution:
-    "Hlavní myšlenka shrnuje, k čemu text jako celek směřuje — ne jen jednu dílčí informaci z něj. " +
-    "Ostatní možnosti buď text nezmiňuje, nebo rozvádějí jen podružný detail.",
-});
+export const textMyslenka: CzechGen = (rng, points, ctx) => {
+  const p = ctx.passages[0];
+  return {
+    prompt: "Která z možností nejlépe vystihuje hlavní myšlenku výchozího textu?",
+    parts: [pick4(rng, "", p.myslenka.correct, [...p.myslenka.wrong], points)],
+    solution:
+      "Hlavní myšlenka shrnuje, k čemu text jako celek směřuje — ne jen jednu dílčí informaci z něj.",
+  };
+};
 
-export const porozumeniVyznam: CzechGen = (rng, points, { passage }) => ({
-  prompt: `Co ve výchozím textu znamená výraz „${passage.vyznam.word}“?`,
-  parts: [pick4(rng, "", passage.vyznam.correct, [...passage.vyznam.wrong], points)],
-  solution: `Význam určíme z kontextu věty, ve které je výraz „${passage.vyznam.word}“ užit.`,
-});
+export const vyznamSlov: CzechGen = (rng, points, ctx) => {
+  const p = ctx.passages[0];
+  return {
+    prompt: `Co ve výchozím textu znamená výraz „${p.vyznam.word}“?`,
+    parts: [pick4(rng, "", p.vyznam.correct, [...p.vyznam.wrong], points)],
+    solution: `Význam určíme z kontextu věty, ve které je výraz „${p.vyznam.word}“ užit.`,
+  };
+};
 
-/* ------------------------------------------------------------------ */
-/* 5. Seřazení vět                                                     */
-/* ------------------------------------------------------------------ */
+/** Tři dichotomické skupiny — každá k jinému výchozímu textu. */
+function vyplyva(idx: 0 | 1 | 2): CzechGen {
+  return (rng, points, ctx) => {
+    const p = ctx.passages[idx];
+    const claims = rng.sample(p.tvrzeni, 4);
+    return {
+      // první text je vypsaný nad celým testem, další dva nese úloha sama
+      stimulusTitle: idx === 0 ? undefined : "VÝCHOZÍ TEXT K ÚLOZE",
+      stimulus: idx === 0 ? undefined : p.text,
+      prompt:
+        "Rozhodněte o každém z následujících tvrzení, zda jednoznačně vyplývá " +
+        (idx === 0 ? "z výchozího textu" : "z výchozího textu k této úloze") +
+        " (A), nebo ne (N).",
+      parts: anoNeGroup(claims, points),
+      solution:
+        claims.map((c, i) => `${i + 1}) ${c.truth ? "A" : "N"} — ${c.why}`).join("\n") +
+        `\n\nHodnocení není lineární: 4 správně → ${points} b, 3 správně → ${points / 2} b, ` +
+        `2 a méně → 0 b.`,
+    };
+  };
+}
+
+export const vyplyvaA = vyplyva(0);
+export const vyplyvaB = vyplyva(1);
+export const vyplyvaC = vyplyva(2);
+
+/* ================================================================== */
+/* Pravopis                                                            */
+/* ================================================================== */
+
+export const pravopisVeta: CzechGen = (rng, points) => {
+  const t = rng.pick(TEXTY_S_NESPISOVNYMI);
+  void t;
+  // vybereme jednu skupinu s chybou a tři bezchybné z jiných skupin
+  const groups = rng.sample(PRAVOPIS_SKUPINY, 4);
+  const bad = groups[0];
+  const badOption = bad.options[rng.pick([1, 2, 3])];
+  const good = groups.slice(1).map((g) => g.options[g.correct]);
+  return {
+    prompt: "Ve které z následujících možností je slovo zapsané s pravopisnou chybou?",
+    parts: [pick4(rng, "", badOption, good, points)],
+    solution: `Chybný zápis je v možnosti „${badOption}“. ${bad.why}`,
+  };
+};
+
+export const pravopisSkupina: CzechGen = (rng, points) => {
+  const g = rng.pick(PRAVOPIS_SKUPINY);
+  return {
+    prompt: "Ve které z následujících možností jsou všechna slova zapsána pravopisně správně?",
+    parts: [fromPick(rng, g, "", points)],
+    solution: g.why,
+  };
+};
+
+export const interpunkceAn: CzechGen = (rng, points) => {
+  const chosen = rng.sample(INTERPUNKCE_VETY, 4);
+  return {
+    prompt:
+      "Rozhodněte o každém z následujících větných celků, zda je v něm správně " +
+      "zapsána interpunkce (A), nebo ne (N).",
+    parts: anoNeGroup(
+      chosen.map((c) => ({ text: c.text, truth: c.ok, why: c.why })),
+      points,
+    ),
+    solution:
+      chosen.map((c, i) => `${i + 1}) ${c.ok ? "A" : "N"} — ${c.why}`).join("\n") +
+      `\n\n4 správně → ${points} b, 3 správně → ${points / 2} b, 2 a méně → 0 b.`,
+  };
+};
+
+export const chybyVTextu: CzechGen = (rng, points, ctx) => {
+  void ctx;
+  const t = rng.pick(TEXTY_S_CHYBAMI);
+  return {
+    stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
+    stimulus: t.text,
+    prompt:
+      `Najděte ve výchozím textu ${t.spravne.length} slova, která jsou v něm zapsána ` +
+      `s pravopisnou chybou, a napište je pravopisně správně.\n` +
+      `(Ohebná slova zapište ve stejném tvaru, v němž jsou užita v textu. Za chybu se považuje ` +
+      `jak neuvedení hledaného slova, tak zapsání slova, které zadání neodpovídá.)`,
+    parts: wordlist(t.spravne),
+    solution:
+      t.why.map((w, i) => `${i + 1}) ${w}`).join("\n") +
+      `\n\nBody = ${points} − počet chyb. Chybou je i zapsání slova, které zadání nevyhovuje, ` +
+      `takže tipovat naslepo se nevyplácí.`,
+  };
+};
+
+/* ================================================================== */
+/* Tvarosloví                                                          */
+/* ================================================================== */
+
+export const slovniDruhy: CzechGen = (rng, points) => {
+  const item = rng.pick(SLOVNI_DRUHY);
+  return {
+    stimulusTitle: "VÝCHOZÍ VĚTA K ÚLOZE",
+    stimulus: item.sentence,
+    prompt: `Jakým slovním druhem je ve výchozí větě slovo „${item.word}“?`,
+    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    solution: `Správně: ${item.correct} — ${item.why}`,
+  };
+};
+
+export const vzory: CzechGen = (rng, points) => {
+  const item = rng.pick(VZORY);
+  return oneOf(rng, item, `Podle kterého vzoru se skloňuje podstatné jméno „${item.q}“?`, points);
+};
+
+/** Přiřazování trojic sloves podle vidu — v sešitu úloha 6. */
+export const vid: CzechGen = (rng, points) => {
+  const per = points / 3;
+  const n = () => rng.shuffle(NEDOKONAVA);
+  const d = () => rng.shuffle(DOKONAVA);
+  const nn = n(), dd = d();
+
+  // tři trojice, které odpovídají tvrzením, a dvě, které neodpovídají žádnému
+  const trojice = [
+    { pattern: "NNN", words: [nn[0], nn[1], nn[2]] },
+    { pattern: "DDN", words: [dd[0], dd[1], nn[3]] },
+    { pattern: "NND", words: [nn[4], nn[5], dd[2]] },
+    { pattern: "DNN", words: [dd[3], nn[6], nn[7]] },
+    { pattern: "NDN", words: [nn[8], dd[4], nn[9]] },
+  ];
+  const offerItems = rng.shuffle(trojice);
+  const offer: Choice[] = offerItems.map((t, i) => ({ key: KEYS[i], text: t.words.join(" – ") }));
+  const keyOf = (pattern: string) => offer[offerItems.findIndex((t) => t.pattern === pattern)].key;
+
+  const statements = [
+    { text: "V této trojici jsou všechna slovesa nedokonavá.", pattern: "NNN" },
+    { text: "V této trojici jsou první dvě slovesa dokonavá a třetí je nedokonavé.", pattern: "DDN" },
+    { text: "V této trojici jsou první dvě slovesa nedokonavá a třetí je dokonavé.", pattern: "NND" },
+  ];
+  const ordered = rng.shuffle(statements);
+
+  return {
+    prompt:
+      "Přiřaďte k jednotlivým tvrzením odpovídající trojici sloves (A–E).\n" +
+      "(Žádná možnost z nabídky nesmí být přiřazena víckrát než jednou.)",
+    offer,
+    parts: ordered.map((s, i) => ({
+      id: String(i + 1),
+      prompt: s.text,
+      format: "match" as const,
+      answer: keyOf(s.pattern),
+      points: per,
+    })),
+    solution:
+      "Dokonavá slovesa vyjadřují děj jako ukončený celek (nelze u nich tvořit přítomný čas), " +
+      "nedokonavá vyjadřují děj probíhající.\n" +
+      ordered
+        .map((s, i) => `${i + 1}) ${keyOf(s.pattern)} — ${offer[offerItems.findIndex((t) => t.pattern === s.pattern)].text}`)
+        .join("\n") +
+      "\nZbylé dvě trojice žádnému z tvrzení neodpovídají.",
+  };
+};
+
+export const tvarSlova: CzechGen = (rng, points) => {
+  const [a, b] = rng.sample(TVAR_SLOVA, 2);
+  const per = points / 2;
+  return {
+    stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
+    stimulus: `${a.text}\n${b.text}`,
+    prompt:
+      "Napište náležitý spisovný tvar uvedeného slova, který patří na vynechané místo.\n" +
+      "(Po doplnění musí být větný celek smysluplný a gramaticky i pravopisně správný.)",
+    parts: [
+      { id: "1", prompt: `slovo „${a.base}“ do první věty`, format: "open-result", answer: a.answer, accept: a.accept ?? [], points: per },
+      { id: "2", prompt: `slovo „${b.base}“ do druhé věty`, format: "open-result", answer: b.answer, accept: b.accept ?? [], points: per },
+    ],
+    solution: `1) ${a.answer} — ${a.why}\n2) ${b.answer} — ${b.why}`,
+  };
+};
+
+/** Dvanáct vět, ve třech je nespisovný tvar slovesa — v sešitu úloha 25. */
+export const nespisovneTvary: CzechGen = (rng, points) => {
+  const bad = rng.sample(VETY_NESPISOVNE, 3);
+  const good = rng.sample(VETY_SPISOVNE, 9);
+  const all = rng.shuffle([
+    ...bad.map((b) => ({ text: b.text, bad: true, why: b.why })),
+    ...good.map((g) => ({ text: g, bad: false, why: "" })),
+  ]);
+  const numbered = all.map((s, i) => ({ ...s, n: i + 1 }));
+  const wanted = numbered.filter((s) => s.bad);
+
+  const lines = numbered.map((s) => `${s.n}. ${s.text}`);
+  const half = Math.ceil(lines.length / 2);
+  const stimulus = lines.slice(0, half).join("\n") + "\n" + lines.slice(half).join("\n");
+
+  return {
+    stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
+    stimulus,
+    prompt:
+      "Ve výchozím textu je uvedeno dvanáct vět: ve třech z nich se vyskytuje nespisovný " +
+      "tvar slovesa. Najděte tyto tři věty a napište jejich čísla.\n" +
+      "(Za chybu se považuje jak neuvedení hledaného čísla, tak zapsání čísla, které zadání neodpovídá.)",
+    parts: wordlist(wanted.map((w) => String(w.n))),
+    solution:
+      wanted.map((w) => `věta ${w.n}: „${w.text}“ — ${w.why}`).join("\n") +
+      `\n\nBody = ${points} − počet chyb.`,
+  };
+};
+
+/* ================================================================== */
+/* Skladba                                                             */
+/* ================================================================== */
+
+export const zakladniDvojice: CzechGen = (rng, points) => {
+  const [a, b] = rng.sample(ZAKLADNI_DVOJICE, 2);
+  const per = points / 2;
+  const mk = (item: (typeof ZAKLADNI_DVOJICE)[number], id: string): Part => ({
+    id,
+    prompt: item.sentence,
+    format: "open-result",
+    answer: `${item.podmet} ${item.prisudek}`,
+    accept: [
+      `podmět: ${item.podmet}; přísudek: ${item.prisudek}`,
+      `${item.podmet}, ${item.prisudek}`,
+      `${item.podmet} – ${item.prisudek}`,
+      ...item.podmetAccept.flatMap((p) =>
+        [item.prisudek, ...item.prisudekAccept].map((q) => `${p} ${q}`),
+      ),
+      ...item.prisudekAccept.map((q) => `${item.podmet} ${q}`),
+    ],
+    points: per,
+  });
+  return {
+    prompt:
+      "Vypište z každé z následujících vět základní skladební dvojici.\n" +
+      "(Zapište podmět a přísudek, pravopisně správně.)",
+    parts: [mk(a, "1"), mk(b, "2")],
+    solution:
+      `1) podmět: ${a.podmet}, přísudek: ${a.prisudek} — ${a.why}\n` +
+      `2) podmět: ${b.podmet}, přísudek: ${b.prisudek} — ${b.why}`,
+  };
+};
+
+export const vetneCleny: CzechGen = (rng, points) => {
+  const [a, b] = rng.sample(VETNE_CLENY, 2);
+  const per = points / 2;
+  return {
+    stimulusTitle: "VÝCHOZÍ VĚTY K ÚLOZE",
+    stimulus: `1) ${a.sentence}\n2) ${b.sentence}`,
+    prompt:
+      "Napište druh vyznačeného větného členu.\n" +
+      "(Odpovědi zapište slovem, nepoužívejte zkratky. Druh příslovečného určení konkretizujte.)",
+    parts: [
+      { id: "1", prompt: `výraz „${a.word}“ v první větě`, format: "open-result", answer: a.correct, points: per },
+      { id: "2", prompt: `výraz „${b.word}“ v druhé větě`, format: "open-result", answer: b.correct, points: per },
+    ],
+    solution: `1) ${a.correct} — ${a.why}\n2) ${b.correct} — ${b.why}`,
+  };
+};
+
+export const druhSouveti: CzechGen = (rng, points, ctx) => {
+  const item = ctx.souveti[1];
+  const correct = item.druh === "podřadné" ? "souvětí podřadné" : "souvětí souřadné";
+  const wrong: [string, string, string] =
+    item.druh === "podřadné"
+      ? ["souvětí souřadné", "věta jednoduchá", "věta jednoduchá s několikanásobným podmětem"]
+      : ["souvětí podřadné", "věta jednoduchá", "věta jednoduchá s několikanásobným přísudkem"];
+  return {
+    stimulusTitle: "VÝCHOZÍ SOUVĚTÍ K ÚLOZE",
+    stimulus: item.sentence,
+    prompt: "O jaký typ souvětí jde?",
+    parts: [pick4(rng, "", correct, wrong, points)],
+    solution: `Správně: ${correct} — ${item.why}`,
+  };
+};
+
+/* ================================================================== */
+/* Slovní zásoba                                                       */
+/* ================================================================== */
+
+export const antonyma: CzechGen = (rng, points) => {
+  const item = rng.pick(ANTONYMA);
+  return oneOf(rng, item, `Které z uvedených slov je antonymem (opakem) ke slovu „${item.q}“?`, points);
+};
+
+export const tvoreniSlov: CzechGen = (rng, points) => oneOf(rng, rng.pick(TVORENI_SLOV), rng.pick(TVORENI_SLOV).q, points);
+
+export const rceni: CzechGen = (rng, points) => {
+  const item = rng.pick(RCENI);
+  return oneOf(rng, item, `Co znamená rčení „${item.q}“?`, points);
+};
+
+/** Vypsání dvou nespisovných slov z výchozího textu — v sešitu úloha 9. */
+export const vypisNespisovna: CzechGen = (rng, points) => {
+  const t = rng.pick(TEXTY_S_NESPISOVNYMI);
+  return {
+    stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
+    stimulus: t.text,
+    prompt:
+      `Vypište z výchozího textu ${t.spravne.length} slova, která jsou nespisovná.\n` +
+      `(Slova zapište ve stejném tvaru, v němž jsou užita v textu. Za chybu se považuje jak ` +
+      `neuvedení hledaného slova, tak zapsání slova, které zadání neodpovídá.)`,
+    parts: wordlist(t.spravne),
+    solution: t.why.map((w, i) => `${i + 1}) ${w}`).join("\n") + `\n\nBody = ${points} − počet chyb.`,
+  };
+};
+
+/* ================================================================== */
+/* Komunikační a slohová výchova                                       */
+/* ================================================================== */
 
 export const serazeni: CzechGen = (rng, points) => {
-  const src = rng.pick(ORDERED_TEXTS);
-  const order = rng.shuffle(src.sentences.map((s, i) => ({ s, i })));
-  const listed = order.map((o, j) => `(${KEYS[j]}) ${o.s}`).join("\n");
-  // správné pořadí = písmena seřazená podle původního indexu
-  const correct = order
+  const src = rng.pick(SERAZENI_TEXTY);
+  const shuffled = rng.shuffle(src.parts.map((s, i) => ({ s, i })));
+  const listed = shuffled.map((o, j) => `${KEYS[j]}) ${o.s}`).join("\n\n");
+  const correct = shuffled
     .map((o, j) => ({ key: KEYS[j], i: o.i }))
     .sort((a, b) => a.i - b.i)
     .map((o) => o.key);
-  const answer = correct.join("");
 
   return {
-    stimulusTitle: "VÝCHOZÍ TEXT",
+    stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus: listed,
     prompt:
-      "Seřaďte uvedené věty tak, aby na sebe navazovaly a tvořily souvislý text.\n" +
-      "Odpověď zapište jako posloupnost písmen (například ADBEC).",
-    parts: [
-      {
-        id: "",
-        prompt: "",
-        format: "open-result",
-        answer,
-        accept: [correct.join(", "), correct.join(" "), correct.join("-")],
-        points,
-      },
-    ],
+      "Seřaďte jednotlivé části textu (A–F) tak, aby byla dodržena textová návaznost.\n" +
+      "(Body lze získat pouze tehdy, je-li celé pořadí správné.)",
+    parts: correct.map((k, i) => ({
+      id: String(i + 1),
+      prompt: `${i + 1}. v pořadí`,
+      format: "order" as const,
+      answer: k,
+      points: 0, // hodnotí se celá úloha najednou
+    })),
     solution:
       `Správné pořadí: ${correct.join(" – ")}\n\n` +
-      src.sentences.map((s, i) => `${i + 1}. ${s}`).join("\n") +
-      `\n\nVodítkem jsou odkazy mezi větami (zájmena, spojky, opakovaná slova) a časová či příčinná posloupnost děje.`,
+      src.parts.map((s, i) => `${i + 1}. ${s}`).join("\n") +
+      `\n\nVodítkem jsou odkazy mezi částmi (zájmena, spojky, opakovaná slova) a časová ` +
+      `či příčinná posloupnost. Za částečně správné pořadí se body neudělují.`,
   };
 };
 
-/* ------------------------------------------------------------------ */
-/* 6.–7. Funkční styl a slohový útvar                                  */
-/* ------------------------------------------------------------------ */
+export const gramatickeDoplneni: CzechGen = (rng, points) => {
+  const item = rng.pick(GRAMATICKE_DOPLNENI);
+  return {
+    stimulusTitle: "VÝCHOZÍ VĚTNÝ CELEK K ÚLOZE",
+    stimulus: item.sentence,
+    prompt:
+      "Kterou z následujících možností je nutné doplnit na vynechané místo, " +
+      "aby byl větný celek gramaticky správný?",
+    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
+    solution: `Správně: ${item.correct} — ${item.why}`,
+  };
+};
 
 export const funkcniStyl: CzechGen = (rng, points) => {
   const item = rng.pick(STYLY);
@@ -200,250 +514,9 @@ export const slohovyUtvar: CzechGen = (rng, points) => {
   };
 };
 
-/* ------------------------------------------------------------------ */
-/* 8.–12. Pravopis                                                     */
-/* ------------------------------------------------------------------ */
-
-export const pravopisDoplnovani: CzechGen = (rng, points) => {
-  const item = rng.pick(PRAVOPIS_SKUPINY);
-  return {
-    prompt: "Ve které z možností jsou všechna slova zapsána pravopisně správně?",
-    parts: [fromPick(rng, item, "", points)],
-    solution: item.why,
-  };
-};
-
-export const pravopisChyba: CzechGen = (rng, points) => {
-  const item = rng.pick(PRAVOPIS_CHYBA);
-  // zde je „správnou odpovědí“ ta věta, která chybu OBSAHUJE
-  return {
-    prompt: "Ve které z možností je pravopisná chyba?",
-    parts: [
-      pick4(
-        rng,
-        "",
-        item.options[item.correct],
-        item.options.filter((_, i) => i !== item.correct),
-        points,
-      ),
-    ],
-    solution: item.why,
-  };
-};
-
-function fillPart(rng: Rng, item: FillItem, points: number): Part {
-  const mixed = rng.shuffle(item.options);
-  return {
-    id: "",
-    prompt: item.text,
-    format: "choice",
-    choices: mixed.map((t, i) => ({ key: KEYS[i], text: t })),
-    answer: KEYS[mixed.indexOf(item.correct)],
-    points,
-  };
-}
-
-export const pravopisShoda: CzechGen = (rng, points) => {
-  const item = rng.pick(SHODA);
-  return {
-    prompt: "Doplňte do vynechaného místa správnou koncovku:",
-    parts: [fillPart(rng, item, points)],
-    solution: item.why,
-  };
-};
-
-export const pravopisMne: CzechGen = (rng, points) => {
-  const item = rng.pick(MNE);
-  return {
-    prompt: "Doplňte do vynechaného místa správnou skupinu hlásek:",
-    parts: [fillPart(rng, item, points)],
-    solution: item.why,
-  };
-};
-
-export const pravopisInterpunkce: CzechGen = (rng, points) => {
-  const item = rng.pick(INTERPUNKCE);
-  return {
-    prompt: "Ve které z možností je interpunkce doplněna správně?",
-    parts: [fromPick(rng, item, "", points)],
-    solution: item.why,
-  };
-};
-
-/* ------------------------------------------------------------------ */
-/* 13.–16. Slovní zásoba                                               */
-/* ------------------------------------------------------------------ */
-
-function oneOf(rng: Rng, item: OneOfItem, prompt: string, points: number): GenResult {
-  return {
-    prompt,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
-    solution: `Správně: ${item.correct} — ${item.why}`,
-  };
-}
-
-export const synonyma: CzechGen = (rng, points) => {
-  const item = rng.pick(SYNONYMA);
-  return oneOf(rng, item, `Které z uvedených slov je synonymem ke slovu „${item.q}“?`, points);
-};
-
-export const antonyma: CzechGen = (rng, points) => {
-  const item = rng.pick(ANTONYMA);
-  return oneOf(rng, item, `Které z uvedených slov je antonymem (opakem) ke slovu „${item.q}“?`, points);
-};
-
-export const tvoreniSlov: CzechGen = (rng, points) => {
-  const item = rng.pick(TVORENI_SLOV);
-  return oneOf(rng, item, item.q, points);
-};
-
-export const rceni: CzechGen = (rng, points) => {
-  const item = rng.pick(RCENI);
-  return oneOf(rng, item, `Co znamená rčení „${item.q}“?`, points);
-};
-
-/* ------------------------------------------------------------------ */
-/* 17.–20. Tvarosloví                                                  */
-/* ------------------------------------------------------------------ */
-
-export const slovniDruhy: CzechGen = (rng, points) => {
-  const item = rng.pick(SLOVNI_DRUHY);
-  return {
-    stimulusTitle: "VÝCHOZÍ VĚTA K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: `Jakým slovním druhem je ve výchozí větě slovo „${item.word}“?`,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
-    solution: `Správně: ${item.correct} — ${item.why}`,
-  };
-};
-
-export const mluvnickeKategorie: CzechGen = (rng, points) => {
-  const item = rng.pick(KATEGORIE);
-  return {
-    stimulusTitle: "VÝCHOZÍ VĚTA K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: `Určete mluvnické kategorie výrazu „${item.word}“ ve výchozí větě.`,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
-    solution: `Správně: ${item.correct} — ${item.why}`,
-  };
-};
-
-export const vzory: CzechGen = (rng, points) => {
-  const item = rng.pick(VZORY);
-  return oneOf(rng, item, `Podle kterého vzoru se skloňuje podstatné jméno „${item.q}“?`, points);
-};
-
-export const tvaryChyba: CzechGen = (rng, points) => {
-  const item = rng.pick(TVARY_CHYBA);
-  return {
-    prompt: "Ve které z možností je tvar utvořen nesprávně?",
-    parts: [fromPick(rng, item, "", points)],
-    solution: item.why,
-  };
-};
-
-/* ------------------------------------------------------------------ */
-/* 21.–25. Skladba                                                     */
-/* ------------------------------------------------------------------ */
-
-export const zakladniDvojice: CzechGen = (rng, points) => {
-  const item = rng.pick(ZAKLADNI_DVOJICE);
-  const pts = splitPoints(points, 2);
-  return {
-    stimulusTitle: "VÝCHOZÍ VĚTA K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: "Vypište ze základní skladební dvojice výchozí věty:",
-    parts: [
-      {
-        id: "a",
-        prompt: "podmět",
-        format: "open-result",
-        answer: item.podmet,
-        accept: item.podmetAccept,
-        points: pts[0],
-      },
-      {
-        id: "b",
-        prompt: "přísudek",
-        format: "open-result",
-        answer: item.prisudek,
-        accept: item.prisudekAccept,
-        points: pts[1],
-      },
-    ],
-    solution: `Podmět: ${item.podmet}, přísudek: ${item.prisudek}. ${item.why}`,
-  };
-};
-
-export const vetneCleny: CzechGen = (rng, points) => {
-  const item = rng.pick(VETNE_CLENY);
-  return {
-    stimulusTitle: "VÝCHOZÍ VĚTA K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: `Jakým větným členem je ve výchozí větě výraz „${item.word}“?`,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
-    solution: `Správně: ${item.correct} — ${item.why}`,
-  };
-};
-
-export const pocetVet: CzechGen = (rng, points, ctx) => {
-  const item = ctx.souveti[0];
-  return {
-    stimulusTitle: "VÝCHOZÍ SOUVĚTÍ K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: "Z kolika vět se výchozí souvětí skládá? Zapište číslicí.",
-    parts: [
-      {
-        id: "",
-        prompt: "",
-        format: "open-result",
-        answer: String(item.pocet),
-        points,
-      },
-    ],
-    solution: `Souvětí má ${item.pocet} věty. Počet vět určíme podle počtu přísudků. ${item.why}`,
-  };
-};
-
-export const druhSouveti: CzechGen = (rng, points, ctx) => {
-  const item = ctx.souveti[1];
-  const correct = item.druh === "podřadné" ? "souvětí podřadné" : "souvětí souřadné";
-  const wrong: [string, string, string] =
-    item.druh === "podřadné"
-      ? ["souvětí souřadné", "věta jednoduchá", "věta jednoduchá s několikanásobným podmětem"]
-      : ["souvětí podřadné", "věta jednoduchá", "věta jednoduchá s několikanásobným přísudkem"];
-  return {
-    stimulusTitle: "VÝCHOZÍ SOUVĚTÍ K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: "O jaký typ souvětí jde?",
-    parts: [pick4(rng, "", correct, wrong, points)],
-    solution: `Správně: ${correct} — ${item.why}`,
-  };
-};
-
-export const vedlejsiVeta: CzechGen = (rng, points, ctx) => {
-  const item = ctx.souveti[2];
-  const all = [
-    "podmětná",
-    "předmětná",
-    "přívlastková",
-    "příslovečná časová",
-    "příslovečná příčinná",
-    "příslovečná místní",
-  ];
-  const wrong = rng.sample(all.filter((a) => a !== item.vedlejsi), 3) as [string, string, string];
-  return {
-    stimulusTitle: "VÝCHOZÍ SOUVĚTÍ K ÚLOZE",
-    stimulus: item.sentence,
-    prompt: "Jaký druh vedlejší věty je ve výchozím souvětí obsažen?",
-    parts: [pick4(rng, "", item.vedlejsi!, wrong, points)],
-    solution: `Správně: věta vedlejší ${item.vedlejsi} — ${item.why}`,
-  };
-};
-
-/* ------------------------------------------------------------------ */
-/* 26.–30. Literární výchova                                           */
-/* ------------------------------------------------------------------ */
+/* ================================================================== */
+/* Literární výchova                                                   */
+/* ================================================================== */
 
 export const literarniDruh: CzechGen = (rng, points) => {
   const item = rng.pick(LIT_DRUHY);
@@ -465,17 +538,6 @@ export const zanr: CzechGen = (rng, points) => {
   };
 };
 
-export const trop: CzechGen = (rng, points) => {
-  const item = rng.pick(TROPY);
-  return {
-    stimulusTitle: "UKÁZKA",
-    stimulus: item.ukazka,
-    prompt: "Který jazykový prostředek je v ukázce užit?",
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
-    solution: `Správně: ${item.correct} — ${item.why}`,
-  };
-};
-
 export const rym: CzechGen = (rng, points) => {
   const item = rng.pick(RYMY);
   return {
@@ -487,47 +549,77 @@ export const rym: CzechGen = (rng, points) => {
   };
 };
 
-export const literarniPojem: CzechGen = (rng, points) => {
-  const item = rng.pick(LIT_POJMY);
+/** Přiřazení úryvků k definicím básnických prostředků — v sešitu úloha 30. */
+export const literarniProstredky: CzechGen = (rng, points) => {
+  const per = points / 4;
+  const defs = rng.shuffle(PROSTREDKY).slice(0, 4);
+
+  // ke každému prostředku jeden úryvek, v němž prokazatelně je
+  const chosen = defs.map((d) => {
+    const cands = UKAZKY_PROSTREDKU.filter((u) => u.prostredek === d.key);
+    return { def: d, ukazka: rng.pick(cands).text };
+  });
+  const fillers = rng.sample(UKAZKY_BEZ_PROSTREDKU, 2);
+  const offerItems = rng.shuffle([
+    ...chosen.map((c) => ({ text: c.ukazka, def: c.def.key })),
+    ...fillers.map((t) => ({ text: t, def: null as string | null })),
+  ]);
+  const offer: Choice[] = offerItems.map((o, i) => ({ key: KEYS[i], text: o.text }));
+
   return {
-    prompt: `Co označuje literární pojem „${item.q}“?`,
-    parts: [pick4(rng, "", item.correct, [...item.wrong], points)],
-    solution: `Správně: ${item.correct} — ${item.why}`,
+    prompt:
+      "Přiřaďte k jednotlivým definicím úryvek (A–F), v němž se popsaný básnický prostředek vyskytuje.\n" +
+      "(Žádná možnost z nabídky nesmí být přiřazena víckrát než jednou.)",
+    offer,
+    parts: chosen.map((c, i) => ({
+      id: String(i + 1),
+      prompt: `${c.def.nazev}: ${c.def.definice}`,
+      format: "match" as const,
+      answer: offer[offerItems.findIndex((o) => o.def === c.def.key)].key,
+      points: per,
+    })),
+    solution:
+      chosen
+        .map((c, i) => {
+          const k = offer[offerItems.findIndex((o) => o.def === c.def.key)].key;
+          return `${i + 1}) ${k} — ${c.def.nazev}: ${c.def.definice}`;
+        })
+        .join("\n") + "\nZbylé dva úryvky žádný z těchto prostředků neobsahují.",
   };
 };
 
 /** Rejstřík generátorů — klíč odpovídá poli `gen` v plánu testu. */
 export const CZECH_GENERATORS: Record<string, CzechGen> = {
-  "porozumeni-obsah": porozumeniObsah,
-  "porozumeni-tvrzeni": porozumeniTvrzeni,
-  "porozumeni-myslenka": porozumeniMyslenka,
-  "porozumeni-vyznam": porozumeniVyznam,
-  serazeni,
-  "funkcni-styl": funkcniStyl,
-  "slohovy-utvar": slohovyUtvar,
-  "pravopis-doplnovani": pravopisDoplnovani,
-  "pravopis-chyba": pravopisChyba,
-  "pravopis-shoda": pravopisShoda,
-  "pravopis-mne": pravopisMne,
-  "pravopis-interpunkce": pravopisInterpunkce,
-  synonyma,
-  antonyma,
-  "tvoreni-slov": tvoreniSlov,
-  rceni,
+  "pravopis-veta": pravopisVeta,
+  "text-obsah": textObsah,
   "slovni-druhy": slovniDruhy,
-  "mluvnicke-kategorie": mluvnickeKategorie,
-  vzory,
-  "tvary-chyba": tvaryChyba,
-  "zakladni-dvojice": zakladniDvojice,
-  "vetne-cleny": vetneCleny,
-  "pocet-vet": pocetVet,
-  "druh-souveti": druhSouveti,
-  "vedlejsi-veta": vedlejsiVeta,
-  "literarni-druh": literarniDruh,
-  zanr,
-  trop,
   rym,
-  "literarni-pojem": literarniPojem,
+  "zakladni-dvojice": zakladniDvojice,
+  vid,
+  "tvar-slova": tvarSlova,
+  "vyplyva-a": vyplyvaA,
+  "vypis-predpony": vypisNespisovna,
+  "tvoreni-slov": tvoreniSlov,
+  "text-myslenka": textMyslenka,
+  "vyznam-slov": vyznamSlov,
+  rceni,
+  "interpunkce-an": interpunkceAn,
+  serazeni,
+  "gramaticke-doplneni": gramatickeDoplneni,
+  "funkcni-styl": funkcniStyl,
+  "chyby-v-textu": chybyVTextu,
+  "vyplyva-b": vyplyvaB,
+  "vetne-cleny": vetneCleny,
+  "literarni-druh": literarniDruh,
+  "druh-souveti": druhSouveti,
+  zanr,
+  "pravopis-skupina": pravopisSkupina,
+  "nespisovne-tvary": nespisovneTvary,
+  "vyplyva-c": vyplyvaC,
+  antonyma,
+  "slohovy-utvar": slohovyUtvar,
+  vzory,
+  "literarni-prostredky": literarniProstredky,
 };
 
-export { PASSAGES };
+export { SYNONYMA };

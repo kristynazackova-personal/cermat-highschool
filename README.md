@@ -14,8 +14,27 @@ jiná čísla, jiné věty, jiné pořadí nabídek.
 ## Podle čeho se testy generují
 
 Parametry zkoušky drží **`src/lib/cermat/spec.ts`** — je to jediný zdroj pravdy.
-Vychází ze *Specifikace požadavků* vydávané Cermatem, která se opírá o vzdělávací
-obory *Český jazyk a literatura* a *Matematika a její aplikace* podle RVP ZV.
+Plán testu je odvozený ze **skutečných testových sešitů a klíčů správných
+řešení JPZ 2026**: čtyř forem z matematiky (M9A–M9D) a tří z českého jazyka
+(C9A–C9C). Rozbor, proti kterému se dá plán ověřit, je v `docs/`:
+
+- [`docs/JPZ_M9A_2026_T1.md`](docs/JPZ_M9A_2026_T1.md) — matematika
+- [`docs/JPZ_C9_2026.md`](docs/JPZ_C9_2026.md) — český jazyk a literatura
+
+Obsah zkoušky vymezuje *Specifikace požadavků* vydávaná Cermatem, která se
+opírá o vzdělávací obory *Český jazyk a literatura* a *Matematika a její
+aplikace* podle RVP ZV.
+
+### Hodnocení není všude lineární
+
+Klíče Cermatu používají tři různá pravidla, která generátor přesně
+napodobuje — a která by se z běžného popisu zkoušky nedala uhodnout:
+
+- **dichotomická skupina A/N** — vše správně → plný počet, jedna chyba →
+  polovina, jinak nula;
+- **„vypište N slov“** — body = max(0, N − chyby), přičemž chybou je i slovo,
+  které zadání nevyhovuje, takže tipovat naslepo se nevyplácí;
+- **seřazení částí textu** — body jen za celé správné pořadí.
 
 | | Matematika | Český jazyk a literatura |
 |---|---|---|

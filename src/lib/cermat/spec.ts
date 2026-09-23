@@ -20,6 +20,8 @@ export type TaskFormat =
   | "choice" // uzavřená úloha s výběrem z nabídky
   | "truefalse" // dichotomická úloha A/N
   | "match" // přiřazovací úloha se společnou nabídkou
+  | "order" // seřazení částí textu
+  | "wordlist" // vypsání několika slov nalezených ve výchozím textu
   | "construction"; // konstrukční (geometrická) úloha
 
 /**
@@ -29,9 +31,20 @@ export type TaskFormat =
  * `stepped`  — dichotomická úloha A/N: v testech Cermat NENÍ hodnocení
  *              lineární. U tříčlenné skupiny za max. 4 body platí
  *              3 správně → 4 b, 2 správně → 2 b, 1 nebo 0 správně → 0 b.
- *              Ověřeno v klíči M9A/M9B/M9C/M9D 2026, úloha 11.
+ *              Ověřeno v klíči M9A/M9B/M9C/M9D 2026, úloha 11, a v klíči
+ *              C9A/C9B/C9C 2026, kde má skupina ČTYŘI podúlohy a platí
+ *              4 správně → 2 b, 3 → 1 b, 2 a méně → 0 b. Pravidlo je tedy
+ *              v obou předmětech totéž: vše správně → plný počet, jedna
+ *              chyba → polovina, jinak nula.
+ * `errors`   — úloha „vypište N slov z výchozího textu“. Body = max(0, N − chyby),
+ *              přičemž chybou je JAK nenalezené slovo, TAK zapsané slovo, které
+ *              zadání neodpovídá. Napsat něco špatně je proto dražší než
+ *              nechat pole prázdné. Pořadí zápisu nerozhoduje.
+ *              Ověřeno v klíči C9A/C9B/C9C 2026 (úlohy 9, 18, 25).
+ * `all-or-nothing` — seřazení částí textu: body jen tehdy, je-li celé pořadí
+ *              správné. Ověřeno v klíči C9A/C9B/C9C 2026, úloha 15 (resp. 14).
  */
-export type ScoringMode = "per-part" | "stepped";
+export type ScoringMode = "per-part" | "stepped" | "errors" | "all-or-nothing";
 
 /** Základní parametry zkoušky. */
 export const EXAM = {
@@ -57,10 +70,12 @@ export const EXAM = {
       tasks: 30,
       points: 50,
       note:
-        "Většina úloh je uzavřených (výběr z nabídky, ANO/NE, přiřazování), " +
-        "menší část otevřených. Řada úloh se váže k výchozímu textu. " +
-        "Za chybné odpovědi se body nestrhávají.",
-      allowed: "Pravidla českého pravopisu ani slovníky NEJSOU povoleny.",
+        "Většina úloh je uzavřených s nabídkou A–D, u každé je právě jedna " +
+        "odpověď správná; menší část je otevřená. Řada úloh se váže k výchozímu " +
+        "textu. Za neuvedené ani za nesprávné řešení se neudělují záporné body. " +
+        "Při psaní odpovědí rozlišujte velká a malá písmena; otevřené odpovědi " +
+        "musí být zapsány pravopisně správně včetně diakritiky.",
+      allowed: "Pouze psací potřeby. Pravidla českého pravopisu ani slovníky povoleny NEJSOU.",
     },
   },
 } as const;
@@ -298,39 +313,52 @@ export const MATH_FORMULAS = {
 
 /**
  * Plán testu z českého jazyka a literatury — 30 úloh, 50 bodů.
- * Úlohy 1–4 a 22–24 se vážou k výchozím textům.
+ *
+ * Odvozeno ze tří skutečných sešitů JPZ 2026 pro čtyřleté obory
+ * (C9A 1. řádný, C9B 2. řádný, C9C 1. náhradní termín). Napříč formami
+ * je stabilní tato skladba:
+ *
+ *   ~17 uzavřených úloh po 1 bodu s nabídkou A–D, vázaných k výchozím textům
+ *   4 dichotomické skupiny A/N po ČTYŘECH tvrzeních, po 2 bodech, stupňovitě
+ *   3 úlohy „vypište N slov / čísel“ za 2, 3 a 4 body, hodnocené počtem chyb
+ *   1 seřazení částí textu za 3 body, hodnocené vše nebo nic
+ *   1 přiřazování ke trojici možností (3 b) a 1 ke čtveřici (4 b)
+ *   1 zápis základní skladební dvojice a 1 určení větných členů, po 2 bodech
+ *   1 doplnění náležitého tvaru slova, 2 body
+ *
+ * Bodové rozložení odpovídá formě C9A.
  */
 export const CZECH_BLUEPRINT: BlueprintItem[] = [
-  { n: 1, gen: "porozumeni-obsah", topic: "porozumeni", points: 2, format: "choice" },
-  { n: 2, gen: "porozumeni-tvrzeni", topic: "porozumeni", points: 3, format: "truefalse" },
-  { n: 3, gen: "porozumeni-myslenka", topic: "porozumeni", points: 2, format: "choice" },
-  { n: 4, gen: "porozumeni-vyznam", topic: "porozumeni", points: 2, format: "choice" },
-  { n: 5, gen: "serazeni", topic: "sloh", points: 3, format: "open-result" },
-  { n: 6, gen: "funkcni-styl", topic: "sloh", points: 2, format: "choice" },
-  { n: 7, gen: "slohovy-utvar", topic: "sloh", points: 2, format: "choice" },
-  { n: 8, gen: "pravopis-doplnovani", topic: "pravopis", points: 2, format: "choice" },
-  { n: 9, gen: "pravopis-chyba", topic: "pravopis", points: 2, format: "choice" },
-  { n: 10, gen: "pravopis-shoda", topic: "pravopis", points: 2, format: "choice" },
-  { n: 11, gen: "pravopis-mne", topic: "pravopis", points: 1, format: "choice" },
-  { n: 12, gen: "pravopis-interpunkce", topic: "pravopis", points: 2, format: "choice" },
-  { n: 13, gen: "synonyma", topic: "slovni-zasoba", points: 1, format: "choice" },
-  { n: 14, gen: "antonyma", topic: "slovni-zasoba", points: 1, format: "choice" },
-  { n: 15, gen: "tvoreni-slov", topic: "slovni-zasoba", points: 2, format: "choice" },
-  { n: 16, gen: "rceni", topic: "slovni-zasoba", points: 2, format: "choice" },
-  { n: 17, gen: "slovni-druhy", topic: "tvaroslovi", points: 2, format: "choice" },
-  { n: 18, gen: "mluvnicke-kategorie", topic: "tvaroslovi", points: 2, format: "choice" },
-  { n: 19, gen: "vzory", topic: "tvaroslovi", points: 1, format: "choice" },
-  { n: 20, gen: "tvary-chyba", topic: "tvaroslovi", points: 1, format: "choice" },
-  { n: 21, gen: "zakladni-dvojice", topic: "skladba", points: 2, format: "open-result" },
-  { n: 22, gen: "vetne-cleny", topic: "skladba", points: 1, format: "choice" },
-  { n: 23, gen: "pocet-vet", topic: "skladba", points: 1, format: "open-result" },
-  { n: 24, gen: "druh-souveti", topic: "skladba", points: 2, format: "choice" },
-  { n: 25, gen: "vedlejsi-veta", topic: "skladba", points: 1, format: "choice" },
-  { n: 26, gen: "literarni-druh", topic: "literatura", points: 1, format: "choice" },
-  { n: 27, gen: "zanr", topic: "literatura", points: 2, format: "choice" },
-  { n: 28, gen: "trop", topic: "literatura", points: 1, format: "choice" },
-  { n: 29, gen: "rym", topic: "literatura", points: 1, format: "choice" },
-  { n: 30, gen: "literarni-pojem", topic: "literatura", points: 1, format: "choice" },
+  { n: 1, gen: "pravopis-veta", topic: "pravopis", points: 1, format: "choice" },
+  { n: 2, gen: "text-obsah", topic: "porozumeni", points: 1, format: "choice" },
+  { n: 3, gen: "slovni-druhy", topic: "tvaroslovi", points: 1, format: "choice" },
+  { n: 4, gen: "rym", topic: "literatura", points: 1, format: "choice" },
+  { n: 5, gen: "zakladni-dvojice", topic: "skladba", points: 2, format: "open-result" },
+  { n: 6, gen: "vid", topic: "tvaroslovi", points: 3, format: "match" },
+  { n: 7, gen: "tvar-slova", topic: "tvaroslovi", points: 2, format: "open-result" },
+  { n: 8, gen: "vyplyva-a", topic: "porozumeni", points: 2, format: "truefalse", scoring: "stepped" },
+  { n: 9, gen: "vypis-predpony", topic: "slovni-zasoba", points: 2, format: "wordlist", scoring: "errors" },
+  { n: 10, gen: "tvoreni-slov", topic: "slovni-zasoba", points: 1, format: "choice" },
+  { n: 11, gen: "text-myslenka", topic: "porozumeni", points: 1, format: "choice" },
+  { n: 12, gen: "vyznam-slov", topic: "slovni-zasoba", points: 1, format: "choice" },
+  { n: 13, gen: "rceni", topic: "slovni-zasoba", points: 1, format: "choice" },
+  { n: 14, gen: "interpunkce-an", topic: "pravopis", points: 2, format: "truefalse", scoring: "stepped" },
+  { n: 15, gen: "serazeni", topic: "sloh", points: 3, format: "order", scoring: "all-or-nothing" },
+  { n: 16, gen: "gramaticke-doplneni", topic: "sloh", points: 1, format: "choice" },
+  { n: 17, gen: "funkcni-styl", topic: "sloh", points: 1, format: "choice" },
+  { n: 18, gen: "chyby-v-textu", topic: "pravopis", points: 4, format: "wordlist", scoring: "errors" },
+  { n: 19, gen: "vyplyva-b", topic: "porozumeni", points: 2, format: "truefalse", scoring: "stepped" },
+  { n: 20, gen: "vetne-cleny", topic: "skladba", points: 2, format: "open-result" },
+  { n: 21, gen: "literarni-druh", topic: "literatura", points: 1, format: "choice" },
+  { n: 22, gen: "druh-souveti", topic: "skladba", points: 1, format: "choice" },
+  { n: 23, gen: "zanr", topic: "literatura", points: 1, format: "choice" },
+  { n: 24, gen: "pravopis-skupina", topic: "pravopis", points: 1, format: "choice" },
+  { n: 25, gen: "nespisovne-tvary", topic: "tvaroslovi", points: 3, format: "wordlist", scoring: "errors" },
+  { n: 26, gen: "vyplyva-c", topic: "porozumeni", points: 2, format: "truefalse", scoring: "stepped" },
+  { n: 27, gen: "antonyma", topic: "slovni-zasoba", points: 1, format: "choice" },
+  { n: 28, gen: "slohovy-utvar", topic: "sloh", points: 1, format: "choice" },
+  { n: 29, gen: "vzory", topic: "tvaroslovi", points: 1, format: "choice" },
+  { n: 30, gen: "literarni-prostredky", topic: "literatura", points: 4, format: "match" },
 ];
 
 /** Kontrola, že plán sedí na parametry zkoušky. Volá se v testech. */

@@ -1,4 +1,4 @@
-import type { TaskFormat } from "./spec";
+import type { ScoringMode, TaskFormat } from "./spec";
 
 export type Choice = { key: string; text: string };
 
@@ -36,7 +36,7 @@ export type GeneratedTask = {
   /** Společná nabídka u přiřazovací úlohy (A–F). */
   offer?: Choice[];
   /** Nelineární hodnocení skupiny — viz ScoringMode ve spec.ts. */
-  scoring?: "per-part" | "stepped";
+  scoring?: ScoringMode;
   /** Komentovaný postup řešení. */
   solution: string;
   /** Úloha se hodnotí ručně (konstrukce, postup). */

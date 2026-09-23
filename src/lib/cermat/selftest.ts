@@ -54,17 +54,21 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
 
     for (const task of test.tasks) {
       const sum = task.parts.reduce((s, p) => s + p.points, 0);
-      if (task.scoring === "stepped") {
+      if (task.scoring && task.scoring !== "per-part") {
         // u stupňovitě hodnocené skupiny nemají podúlohy vlastní dotaci
         check(
-          `${subject}/úloha ${task.n}: stupňovitá úloha nesmí bodovat podúlohy`,
+          `${subject}/úloha ${task.n}: skupinově hodnocená úloha nesmí bodovat podúlohy`,
           sum === 0,
           `${sum}`,
         );
-        check(
-          `${subject}/úloha ${task.n}: stupňovitá úloha musí mít 3 podúlohy`,
-          task.parts.length === 3,
-        );
+        if (task.scoring === "stepped") {
+          // dichotomická skupina: matematika má tři tvrzení, čeština čtyři
+          check(
+            `${subject}/úloha ${task.n}: dichotomická skupina má mít 3 nebo 4 tvrzení`,
+            task.parts.length === 3 || task.parts.length === 4,
+            `${task.parts.length}`,
+          );
+        }
       } else {
         check(
           `${subject}/úloha ${task.n}: body podúloh se nesečtou na dotaci úlohy`,
@@ -82,7 +86,12 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
       for (const part of task.parts) {
         const key = `${task.n}.${part.id}`;
 
-        if (part.format === "match") {
+        if (part.format === "wordlist" || part.format === "order") {
+          check(
+            `${subject}/úloha ${task.n}: ${part.format} bez odpovědi`,
+            part.answer.trim().length > 0,
+          );
+        } else if (part.format === "match") {
           check(`${subject}/úloha ${task.n}: přiřazovací úloha bez společné nabídky`, !!task.offer);
           check(
             `${subject}/úloha ${task.n}: odpověď není v nabídce`,
@@ -134,7 +143,7 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
     // přiřazovací úloha musí mít navzájem různé správné odpovědi,
     // jinak by přiřazení nebylo jednoznačné
     for (const task of test.tasks) {
-      if (!task.offer) continue;
+      if (!task.offer && task.parts[0]?.format !== "order") continue;
       const keys = task.parts.map((p) => p.answer);
       check(
         `${subject}/úloha ${task.n}: přiřazovací úloha má dvě stejné správné odpovědi`,
@@ -151,12 +160,51 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
       `${score.earned}/50 (seed ${seed})`,
     );
 
+    // vypsání slov: jedna chyba stojí jeden bod, chybný zápis se počítá zvlášť
+    const errTask = test.tasks.find((t) => t.scoring === "errors");
+    if (errTask) {
+      const oneMissing = { ...perfect };
+      delete oneMissing[`${errTask.n}.${errTask.parts[0].id}`];
+      const e1 = scoreTest(test, oneMissing, selfScores);
+      check(
+        `${subject}: nevyplněné pole u úlohy „vypište“ nemá stát právě jeden bod`,
+        e1.earned === 50 - 1,
+        `${e1.earned}`,
+      );
+
+      // jedno správné slovo nahrazené nesmyslem = 2 chyby (nenalezené + nevyhovující)
+      const oneWrong = { ...perfect };
+      oneWrong[`${errTask.n}.${errTask.parts[0].id}`] = "zcelajinéslovo";
+      const e2 = scoreTest(test, oneWrong, selfScores);
+      check(
+        `${subject}: chybný zápis u úlohy „vypište“ má stát dva body`,
+        e2.earned === 50 - 2,
+        `${e2.earned}`,
+      );
+    }
+
+    // seřazení: částečně správné pořadí nedává nic
+    const orderTask = test.tasks.find((t) => t.scoring === "all-or-nothing");
+    if (orderTask) {
+      const swapped = { ...perfect };
+      const k0 = `${orderTask.n}.${orderTask.parts[0].id}`;
+      const k1 = `${orderTask.n}.${orderTask.parts[1].id}`;
+      swapped[k0] = orderTask.parts[1].answer;
+      swapped[k1] = orderTask.parts[0].answer;
+      const o1 = scoreTest(test, swapped, selfScores);
+      check(
+        `${subject}: částečně správné seřazení nemá dávat body`,
+        o1.earned === 50 - orderTask.points,
+        `${o1.earned}`,
+      );
+    }
+
     // stupňovité hodnocení: jedna chyba = polovina, dvě chyby = nula
     const stepTask = test.tasks.find((t) => t.scoring === "stepped");
     if (stepTask) {
       const oneWrong = { ...perfect };
       const k0 = `${stepTask.n}.${stepTask.parts[0].id}`;
-      oneWrong[k0] = stepTask.parts[0].answer === "A" ? "N" : "A";
+      oneWrong[k0] = stepTask.parts[0].answer === "A" || stepTask.parts[0].answer === "ANO" ? "N" : "A";
       const s1 = scoreTest(test, oneWrong, selfScores);
       check(
         `${subject}: jedna chyba v úloze A/N nemá stát polovinu bodů`,
@@ -166,7 +214,7 @@ for (const subject of ["matematika", "cestina"] as Subject[]) {
 
       const twoWrong = { ...oneWrong };
       const k1 = `${stepTask.n}.${stepTask.parts[1].id}`;
-      twoWrong[k1] = stepTask.parts[1].answer === "A" ? "N" : "A";
+      twoWrong[k1] = stepTask.parts[1].answer === "A" || stepTask.parts[1].answer === "ANO" ? "N" : "A";
       const s2 = scoreTest(test, twoWrong, selfScores);
       check(
         `${subject}: dvě chyby v úloze A/N nemají stát celou dotaci`,

@@ -61,7 +61,7 @@ export function generateTest(subject: Subject, seed: number): GeneratedTest {
     subject,
     subjectLabel: cfg.label,
     intro: ctx
-      ? { title: "VÝCHOZÍ TEXT", text: ctx.passage.text, tasks: "úlohy 1–4" }
+      ? { title: "VÝCHOZÍ TEXT", text: ctx.passages[0].text, tasks: "úlohy 2, 8, 11 a 12" }
       : undefined,
     seed,
     code: seedCode(seed),
@@ -124,6 +124,36 @@ export function steppedScore(correct: number, total: number, points: number): nu
 }
 
 /**
+ * Hodnocení úlohy „vypište N slov z výchozího textu“.
+ *
+ * Klíč Cermatu počítá chyby, ne správné odpovědi, a za chybu považuje
+ * obojí: nenalezené hledané slovo i zapsání slova, které zadání nevyhovuje.
+ * Napsat něco naslepo je proto dražší než nechat pole prázdné.
+ * Na pořadí zápisu nezáleží.
+ *
+ * Příklad z klíče C9A: hledá se {zapsanou, pravěkých}, žák napíše
+ * {poutavý, zapsanou} → 1 nenalezené + 1 nevyhovující = 2 chyby → 0 bodů.
+ */
+export function errorScore(
+  given: string[],
+  expected: string[],
+  points: number,
+  eq: (a: string, b: string) => boolean,
+): { earned: number; errors: number } {
+  const written = given.map((g) => g.trim()).filter(Boolean);
+  const unmatched = [...expected];
+  let invalid = 0;
+
+  for (const w of written) {
+    const i = unmatched.findIndex((e) => eq(w, e));
+    if (i >= 0) unmatched.splice(i, 1);
+    else invalid++;
+  }
+  const errors = unmatched.length + invalid;
+  return { earned: Math.max(0, points - errors), errors };
+}
+
+/**
  * Vyhodnotí odpovědi. `answers` je mapa "úloha.podúloha" → odpověď,
  * `selfScores` je mapa téhož klíče → body, které si žák přiznal u ručně
  * hodnocených částí.
@@ -139,7 +169,8 @@ export function scoreTest(
   let selfGradedPoints = 0;
 
   for (const task of test.tasks) {
-    const stepped = task.scoring === "stepped";
+    const mode = task.scoring ?? "per-part";
+    const grouped = mode !== "per-part";
     let taskEarned = 0;
     let correctParts = 0;
 
@@ -151,16 +182,16 @@ export function scoreTest(
       if (correct) correctParts++;
       if (isSelf) selfGradedPoints += part.points;
 
-      // U stupňovitě hodnocené úlohy nemají podúlohy vlastní bodovou dotaci —
+      // U skupinově hodnocené úlohy nemají podúlohy vlastní bodovou dotaci —
       // body se přidělují až za celou skupinu.
-      const earned = stepped
+      const earned = grouped
         ? 0
         : isSelf
           ? Math.max(0, Math.min(part.points, selfScores[key] ?? 0))
           : correct
             ? part.points
             : 0;
-      if (!stepped) taskEarned += earned;
+      if (!grouped) taskEarned += earned;
 
       parts.push({
         taskN: task.n,
@@ -168,12 +199,23 @@ export function scoreTest(
         given,
         correct,
         selfGraded: isSelf,
-        points: stepped ? 0 : part.points,
+        points: grouped ? 0 : part.points,
         earned,
       });
     }
 
-    if (stepped) taskEarned = steppedScore(correctParts, task.parts.length, task.points);
+    if (mode === "stepped") {
+      taskEarned = steppedScore(correctParts, task.parts.length, task.points);
+    } else if (mode === "all-or-nothing") {
+      // seřazení částí textu: body jen za celé správné pořadí
+      taskEarned = correctParts === task.parts.length ? task.points : 0;
+    } else if (mode === "errors") {
+      const given = task.parts.map((p) => answers[`${task.n}.${p.id}`] ?? "");
+      const expected = task.parts.map((p) => p.answer);
+      taskEarned = errorScore(given, expected, task.points, (a, b) =>
+        answersMatch(a, b, task.parts.find((p) => p.answer === b)?.accept),
+      ).earned;
+    }
 
     tasks.push({
       n: task.n,
