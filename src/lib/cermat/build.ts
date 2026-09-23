@@ -41,10 +41,10 @@ export function generateTest(subject: Subject, seed: number): GeneratedTest {
 
     return {
       n: item.n,
-      gen: item.gen,
+      gen: result.gen ?? item.gen,
       points: item.points,
-      topic: item.topic,
-      topicLabel: topicLabel(subject, item.topic),
+      topic: result.topic ?? item.topic,
+      topicLabel: topicLabel(subject, result.topic ?? item.topic),
       format: item.format,
       prompt: result.prompt,
       parts: result.parts,

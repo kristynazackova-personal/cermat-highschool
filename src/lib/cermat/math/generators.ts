@@ -3,6 +3,10 @@ import type { Choice, Part } from "../types";
 import { Frac, cz, gcd, plural, svg, TRIPLES } from "./helpers";
 
 export type GenResult = {
+  /** Přepíše klíč generátoru z plánu — když jedna pozice střídá víc typů úloh. */
+  gen?: string;
+  /** Přepíše tematický okruh z plánu — týž důvod. */
+  topic?: string;
   prompt: string;
   parts: Part[];
   solution: string;

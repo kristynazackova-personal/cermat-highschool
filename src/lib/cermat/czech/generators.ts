@@ -30,6 +30,7 @@ import {
   UKAZKY_BEZ_PROSTREDKU,
 } from "./banks2";
 import { TEXTY_S_CHYBAMI, TEXTY_S_NESPISOVNYMI, SERAZENI_TEXTY } from "./texty2";
+import { LEXICON, matching, syllableWord, type LexWord } from "./morfologie";
 
 /**
  * Sdílený kontext testu. Vybírá se jednou při sestavování testu:
@@ -368,6 +369,7 @@ export const zakladniDvojice: CzechGen = (rng, points) => {
     points: per,
   });
   return {
+    gen: "zakladni-dvojice",
     prompt:
       "Vypište z každé z následujících vět základní skladební dvojici.\n" +
       "(Zapište podmět a přísudek, pravopisně správně.)",
@@ -620,3 +622,70 @@ export const CZECH_GENERATORS: Record<string, CzechGen> = {
 };
 
 export { SYNONYMA };
+
+/**
+ * Napište slovo, které odpovídá zadaným vlastnostem (v sešitu úloha 5).
+ *
+ * Tohle je jediná úloha z češtiny, která se generuje v pravém slova smyslu:
+ * neskládá se z hotových vět, ale ze SLOV a jejich vlastností. Zadání vznikne
+ * tak, že se vybere slovo a popíše se čtyřmi rysy, které ho v zásobě určují;
+ * uznají se pak všechna slova, která těm rysům vyhovují.
+ */
+export const slovoPodleZadani: CzechGen = (rng, points) => {
+  const per = points / 2;
+
+  // dvě zadání s jediným řešením, jedno podstatné a jedno přídavné jméno
+  const pick = (pos: LexWord["pos"]) => {
+    // slovo, které je samo kořenem („příbuzné se slovem CHYBA“ → chyba), by
+    // úlohu prozradilo — hledané slovo musí být od kořene odvozené
+    const cands = rng.shuffle(
+      LEXICON.filter((w) => w.pos === pos && w.w.toLowerCase() !== w.root.toLowerCase()),
+    );
+    for (const w of cands) {
+      const m = matching(w);
+      if (m.length >= 1 && m.length <= 2) return { w, accept: m.map((x) => x.w) };
+    }
+    const w = cands[0];
+    return { w, accept: matching(w).map((x) => x.w) };
+  };
+
+  const a = pick("podstatné jméno");
+  const b = pick("přídavné jméno");
+
+  const describe = (x: LexWord) =>
+    `Napište ${x.pos}, které je v 1. pádě čísla jednotného ${syllableWord(x.syll)}, ` +
+    `je příbuzné se slovem ${x.root}, skloňuje se podle vzoru ${x.vzor.toUpperCase()} ` +
+    `a ${x.prefix ? "má předponu" : "je bez předpony"}.`;
+
+  const part = (id: string, p: { w: LexWord; accept: string[] }): Part => ({
+    id,
+    prompt: describe(p.w),
+    format: "open-result",
+    answer: p.w.w,
+    accept: p.accept.filter((x) => x !== p.w.w),
+    points: per,
+  });
+
+  return {
+    gen: "slovo-podle-zadani",
+    topic: "slovni-zasoba",
+    prompt:
+      "Ke každé podúloze napište dnešní spisovné slovo, které zadání vyhovuje. " +
+      "Nesmí jít o vlastní jméno ani o slovo zastaralé.\n" +
+      "(Zapisujte pravopisně správně.)",
+    parts: [part("1", a), part("2", b)],
+    solution:
+      `1) ${a.accept.join(" / ")}\n2) ${b.accept.join(" / ")}\n\n` +
+      `Zadání vymezuje slovo čtyřmi rysy najednou — slovním druhem, počtem slabik, ` +
+      `příbuzností a vzorem — a k tomu tím, zda má předponu. Uznává se i jiné slovo, ` +
+      `které všem rysům vyhovuje; tenhle web zná omezenou zásobu slov, takže ` +
+      `neobvyklou správnou odpověď nemusí rozpoznat.`,
+  };
+};
+
+/** Úloha 5 střídá dva otevřené typy, oba se ve skutečných sešitech vyskytují. */
+export const otevrenaTvaroslovi: CzechGen = (rng, points, ctx) =>
+  rng.chance(0.5) ? slovoPodleZadani(rng, points, ctx) : zakladniDvojice(rng, points, ctx);
+
+CZECH_GENERATORS["zakladni-dvojice"] = otevrenaTvaroslovi;
+CZECH_GENERATORS["slovo-podle-zadani"] = slovoPodleZadani;
