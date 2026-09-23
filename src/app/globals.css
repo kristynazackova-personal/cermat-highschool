@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --ink: #16150f;
+  --muted: #605c52;
+  --line: #e4e0d8;
+  --accent: #1d4ed8;
+  --accent-soft: #eef2ff;
+  --good: #15803d;
+  --good-soft: #f0fdf4;
+  --bad: #b91c1c;
+  --bad-soft: #fef2f2;
+  --warn: #a16207;
+  --warn-soft: #fefce8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f;
+    --surface: #1c1b16;
+    --ink: #f4f1ea;
+    --muted: #a5a091;
+    --line: #322f27;
+    --accent: #93b4ff;
+    --accent-soft: #1e2436;
+    --good: #6ee7a8;
+    --good-soft: #16241c;
+    --bad: #fca5a5;
+    --bad-soft: #2a1a1a;
+    --warn: #fcd34d;
+    --warn-soft: #2a2312;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Zadání úloh je psáno s pevnými zlomy řádků — zachováváme je. */
+.pre-wrap {
+  white-space: pre-wrap;
+}
+
+/* Tabulka zapsaná v markdownu ve výchozím textu */
+.stimulus-table table {
+  border-collapse: collapse;
+  margin: 0.25rem 0;
+}
+.stimulus-table th,
+.stimulus-table td {
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.75rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.stimulus-table th {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}

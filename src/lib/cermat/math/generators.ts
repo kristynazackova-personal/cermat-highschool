@@ -540,28 +540,30 @@ export const tabulka: MathGen = (rng, points) => {
 
 /** Vykreslí obrazec ve tvaru L s okótovanými stranami. */
 function lShapeSvg(a: number, b: number, c: number, d: number): string {
-  const pad = 34;
-  const scale = Math.min(300 / a, 200 / b);
-  const W = a * scale, H = b * scale;
-  const px = (x: number) => pad + x * scale;
-  const py = (y: number) => pad + (b - y) * scale;
+  // Okraje jsou v pixelech, ne v jednotkách obrazce — jinak se kóta u úzkého
+  // obrazce ořízne (délka popisku na měřítku obrazce nezávisí).
+  const ML = 58, MR = 58, MT = 26, MB = 32;
+  const scale = Math.min(230 / a, 175 / b);
+  const px = (x: number) => ML + x * scale;
+  const py = (y: number) => MT + (b - y) * scale;
+
   const pts = [
     [0, 0], [a, 0], [a, b - d], [a - c, b - d], [a - c, b], [0, b],
   ].map(([x, y]) => `${px(x)},${py(y)}`).join(" ");
 
-  const lbl = (x: number, y: number, t: string, anchor = "middle") =>
-    `<text x="${px(x)}" y="${py(y)}" text-anchor="${anchor}" font-size="13" fill="currentColor">${t}</text>`;
+  const lbl = (x: number, y: number, t: string, anchor: string) =>
+    `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="13" fill="currentColor">${t}</text>`;
 
   return svg(
     `<polygon points="${pts}" fill="rgba(99,102,241,0.10)" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>` +
-      lbl(a / 2, -0.55, `${a} cm`) +
-      lbl(a + 0.5, (b - d) / 2, `${b - d} cm`, "start") +
-      lbl(a - c / 2, b - d + 0.45, `${c} cm`) +
-      lbl(a - c - 0.4, b - d / 2, `${d} cm`, "end") +
-      lbl((a - c) / 2, b + 0.4, `${a - c} cm`) +
-      lbl(-0.5, b / 2, `${b} cm`, "end"),
-    W + pad * 2.2,
-    H + pad * 2,
+      lbl(px(a / 2), py(0) + 20, `${a} cm`, "middle") +
+      lbl(px(0) - 9, py(b / 2) + 4, `${b} cm`, "end") +
+      lbl(px(a) + 9, py((b - d) / 2) + 4, `${b - d} cm`, "start") +
+      lbl(px((a - c) / 2), py(b) - 9, `${a - c} cm`, "middle") +
+      lbl(px(a - c / 2), py(b - d) + 18, `${c} cm`, "middle") +
+      lbl(px(a - c) + 9, py(b - d / 2) + 4, `${d} cm`, "start"),
+    ML + a * scale + MR,
+    MT + b * scale + MB,
   );
 }
 
@@ -595,35 +597,45 @@ export const obsah: MathGen = (rng, points) => {
 /* 11. Pythagorova věta                                                */
 /* ------------------------------------------------------------------ */
 
-function rightTriangleSvg(a: number, b: number, unknown: "a" | "b" | "c"): string {
-  const pad = 36;
-  const scale = Math.min(250 / Math.max(a, b), 170 / Math.max(a, b));
-  const W = b * scale, H = a * scale;
-  const x0 = pad, y0 = pad + H;
-  const A = `${x0},${y0}`, B = `${x0 + W},${y0}`, C = `${x0},${pad}`;
+/** Pravoúhlý trojúhelník s odvěsnou `a` vlevo, `b` dole a přeponou. Popisky se předávají hotové. */
+function rightTriangleSvg(a: number, b: number, labels: { a: string; b: string; c: string }): string {
+  const ML = 46, MR = 52, MT = 22, MB = 34;
+  const scale = Math.min(230 / b, 165 / a);
+  const px = (x: number) => ML + x * scale;
+  const py = (y: number) => MT + (a - y) * scale;
   const m = 13;
+
+  const A = `${px(0)},${py(0)}`;
+  const B = `${px(b)},${py(0)}`;
+  const C = `${px(0)},${py(a)}`;
+
+  const lbl = (x: number, y: number, t: string, anchor: string) =>
+    `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="13" fill="currentColor">${t}</text>`;
+
   return svg(
     `<polygon points="${A} ${B} ${C}" fill="rgba(16,185,129,0.10)" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>` +
-      `<path d="M ${x0} ${y0 - m} L ${x0 + m} ${y0 - m} L ${x0 + m} ${y0}" fill="none" stroke="currentColor" stroke-width="1.2"/>` +
-      `<text x="${x0 + W / 2}" y="${y0 + 20}" text-anchor="middle" font-size="13" fill="currentColor">${unknown === "b" ? "?" : b + " cm"}</text>` +
-      `<text x="${x0 - 8}" y="${pad + H / 2}" text-anchor="end" font-size="13" fill="currentColor">${unknown === "a" ? "?" : a + " cm"}</text>` +
-      `<text x="${x0 + W / 2 + 14}" y="${pad + H / 2 - 6}" text-anchor="start" font-size="13" fill="currentColor">${unknown === "c" ? "?" : "c"}</text>`,
-    W + pad * 2.4,
-    H + pad * 2,
+      `<path d="M ${px(0)} ${py(0) - m} L ${px(0) + m} ${py(0) - m} L ${px(0) + m} ${py(0)}" fill="none" stroke="currentColor" stroke-width="1.2"/>` +
+      lbl(px(b / 2), py(0) + 20, labels.b, "middle") +
+      lbl(px(0) - 9, py(a / 2) + 4, labels.a, "end") +
+      lbl(px(b / 2) + 16, py(a / 2) - 4, labels.c, "start"),
+    ML + b * scale + MR,
+    MT + a * scale + MB,
   );
 }
 
 export const pythagoras: MathGen = (rng, points) => {
   const pts = splitPoints(points, 2);
   const [t1, t2, t3] = rng.pick(TRIPLES);
-  const k = rng.pick([1, 1, 2, 3]);
+  // Trojici zvětšujeme jen tak, aby se druhé mocniny daly spočítat z hlavy —
+  // u zkoušky není povolena kalkulačka.
+  const k = rng.int(1, Math.min(4, Math.max(1, Math.floor(55 / t3))));
   const a = t1 * k, b = t2 * k, c = t3 * k;
   const findHypotenuse = rng.chance(0.6);
   const area = (a * b) / 2;
 
   if (findHypotenuse) {
     return {
-      figure: rightTriangleSvg(a, b, "c"),
+      figure: rightTriangleSvg(a, b, { a: `${a} cm`, b: `${b} cm`, c: "?" }),
       prompt:
         `Pravoúhlý trojúhelník má odvěsny dlouhé ${a} cm a ${b} cm.`,
       parts: [
@@ -637,7 +649,7 @@ export const pythagoras: MathGen = (rng, points) => {
   }
 
   return {
-    figure: rightTriangleSvg(a, b, "a"),
+    figure: rightTriangleSvg(a, b, { a: "?", b: `${b} cm`, c: `${c} cm` }),
     prompt: `Pravoúhlý trojúhelník má přeponu ${c} cm a jednu odvěsnu ${b} cm.`,
     parts: [
       open("a", "Vypočtěte délku druhé odvěsny.", String(a), pts[0], { unit: "cm" }),
