@@ -39,7 +39,9 @@ import {
   UKAZKY_PROSTREDKU,
   UKAZKY_BEZ_PROSTREDKU,
 } from "./banks2";
-import { TEXTY_S_CHYBAMI, TEXTY_S_NESPISOVNYMI, SERAZENI_TEXTY } from "./texty2";
+import { SERAZENI_TEXTY } from "./texty2";
+import { TEXTY_S_CHYBAMI, TEXTY_S_NESPISOVNYMI } from "./texty-sloty";
+import { renderSlots } from "./sloty";
 import { LEXICON, matching, syllableWord, type LexWord } from "./morfologie";
 
 /**
@@ -224,16 +226,16 @@ export const interpunkceAn: CzechGen = (rng, points) => {
 };
 
 export const chybyVTextu: CzechGen = (rng, points) => {
-  const t = rng.pick(TEXTY_S_CHYBAMI);
+  const t = renderSlots(rng, rng.pick(TEXTY_S_CHYBAMI), 4);
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus: t.text,
     prompt:
-      `Najděte ve výchozím textu ${t.spravne.length} slova, která jsou v něm zapsána ` +
+      `Najděte ve výchozím textu ${t.hledana.length} slova, která jsou v něm zapsána ` +
       `s pravopisnou chybou, a napište je pravopisně správně.\n` +
       `(Ohebná slova zapište ve stejném tvaru, v němž jsou užita v textu. Za chybu se považuje ` +
       `jak neuvedení hledaného slova, tak zapsání slova, které zadání neodpovídá.)`,
-    parts: wordlist(t.spravne),
+    parts: wordlist(t.hledana),
     solution:
       t.why.map((w, i) => `${i + 1}) ${w}`).join("\n") +
       `\n\nBody = ${points} − počet chyb. Chybou je i zapsání slova, které zadání nevyhovuje, ` +
@@ -451,15 +453,15 @@ export const rceni: CzechGen = (rng, points) => {
 
 /** Vypsání dvou nespisovných slov z výchozího textu — v sešitu úloha 9. */
 export const vypisNespisovna: CzechGen = (rng, points) => {
-  const t = rng.pick(TEXTY_S_NESPISOVNYMI);
+  const t = renderSlots(rng, rng.pick(TEXTY_S_NESPISOVNYMI), 2);
   return {
     stimulusTitle: "VÝCHOZÍ TEXT K ÚLOZE",
     stimulus: t.text,
     prompt:
-      `Vypište z výchozího textu ${t.spravne.length} slova, která jsou nespisovná.\n` +
+      `Vypište z výchozího textu ${t.hledana.length} slova, která jsou nespisovná.\n` +
       `(Slova zapište ve stejném tvaru, v němž jsou užita v textu. Za chybu se považuje jak ` +
       `neuvedení hledaného slova, tak zapsání slova, které zadání neodpovídá.)`,
-    parts: wordlist(t.spravne),
+    parts: wordlist(t.hledana),
     solution: t.why.map((w, i) => `${i + 1}) ${w}`).join("\n") + `\n\nBody = ${points} − počet chyb.`,
   };
 };
