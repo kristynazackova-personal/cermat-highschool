@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { db, dbConfigured } from "@/lib/server/db";
 import { zahozeneAdresy } from "@/auth";
+import { SCHEMA_SQL } from "@/lib/server/schema";
 
 export const dynamic = "force-dynamic";
 
-/** Tabulky, které přihlašování a ukládání odpovědí potřebují. */
-const POTREBNE = ["users", "accounts", "sessions", "verification_token", "attempts", "attempt_tasks"];
+/**
+ * Tabulky, které schéma zakládá — vyčtené ze schématu, ne opsané.
+ *
+ * Opsaný seznam zastaral hned při první nové tabulce a výpis pak tvrdil, že
+ * nic nechybí, přestože o ní nevěděl.
+ */
+const POTREBNE = [...SCHEMA_SQL.matchAll(/CREATE TABLE IF NOT EXISTS\s+(\w+)/g)].map((m) => m[1]);
 
 /**
  * Z chybové hlášky se nesmí dostat ven přístupové údaje: v připojovacím
